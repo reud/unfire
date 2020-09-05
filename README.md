@@ -8,6 +8,9 @@
 
 `root/scripts/manager.sh run docker`
 
+- health
+
+https://unfire.herokuapp.com/api/v1/health
 
 # 参考
 
