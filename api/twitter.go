@@ -29,14 +29,14 @@ func LoginByTwitter() echo.HandlerFunc {
 
 		sess, err := session.Get("session", c)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session", err))
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting sessio　in planting req,reqt", err))
 		}
 		sess.Values["request_token"] = rt.Token
 		sess.Values["request_token_secret"] = rt.Secret
 
 		err = sess.Save(c.Request(), c.Response())
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to write a json", err))
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to write session", err))
 		}
 
 		url := oc.AuthorizationURL(rt, nil)
@@ -57,14 +57,14 @@ func TwitterCallback() echo.HandlerFunc {
 		}
 		reqt, ok := sess.Values["request_token"].(string)
 		if !ok {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (request_token)", nil))
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (request_token)", reqt))
 		}
 		if reqt != q.OAuthToken {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error at request_token != oauth_token", nil))
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error at request_token != oauth_token", reqt))
 		}
 		reqts, ok := sess.Values["request_token_secret"].(string)
 		if !ok {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (request_token_secret)", nil))
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (request_token_secret)", reqts))
 		}
 		code, at, err := client.GetAccessToken(&oauth.Credentials{
 			Token:  reqt,
@@ -82,10 +82,9 @@ func TwitterCallback() echo.HandlerFunc {
 			return c.JSON(code, nil)
 		}
 
-		// TODO use id to make user login.
 		fmt.Println(account)
 
-		return c.JSON(http.StatusOK, nil)
+		return c.JSON(http.StatusOK, model.NewResponse(http.StatusOK, "ok", account))
 	}
 
 }

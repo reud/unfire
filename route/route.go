@@ -10,7 +10,7 @@ import (
 
 func Init() *echo.Echo {
 	e := echo.New()
-	session.Middleware(sessions.NewCookieStore([]byte("secret")))
+	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 
 	e.Use(echoMw.CORSWithConfig(echoMw.CORSConfig{
 		AllowOrigins: []string{"*"},
