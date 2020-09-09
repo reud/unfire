@@ -1,13 +1,13 @@
 package api
 
 import (
-	"fmt"
 	"github.com/garyburd/go-oauth/oauth"
-	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"unfire/client"
 	"unfire/model"
+	"unfire/session"
+	"unfire/tunnel"
 )
 
 type TwitterCallBackQuery struct {
@@ -19,6 +19,22 @@ const (
 	callbackURL = "http://127.0.0.1:8080/api/v1/auth/callback"
 )
 
+func pickAccessToken(c *echo.Context) (string, string, bool, error) {
+	atmn, err := session.NewManager("at", c)
+	if err != nil {
+		return "", "", false, err
+	}
+	t, ok := atmn.Get("token")
+	if !ok {
+		return "", "", false, nil
+	}
+	s, ok := atmn.Get("secret")
+	if !ok {
+		return "", "", false, nil
+	}
+	return t.(string), s.(string), true, nil
+}
+
 func LoginByTwitter() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		oc := client.NewTWClient()
@@ -27,14 +43,32 @@ func LoginByTwitter() echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, err)
 		}
 
-		sess, err := session.Get("session", c)
+		// もしもすでにアクセストークンがある場合
+		t, s, ok, err := pickAccessToken(&c)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to create session", err))
+		}
+		if ok {
+			account := struct {
+				AT     string `json:"access_token"`
+				ATS    string `json:"access_token_secret"`
+				Status string `json:"status"`
+			}{AT: t, ATS: s, Status: "OK"}
+			if err := tunnel.AddUserByCredentials(t, s); err != nil {
+				return c.JSON(http.StatusInternalServerError, model.NewResponse(http.StatusInternalServerError, "failed to add tunnel", err))
+			}
+			return c.JSON(http.StatusOK, model.NewResponse(http.StatusOK, "ok lets go.", account))
+		}
+
+		mn, err := session.NewManager("request", &c)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting sessio　in planting req,reqt", err))
 		}
-		sess.Values["request_token"] = rt.Token
-		sess.Values["request_token_secret"] = rt.Secret
 
-		err = sess.Save(c.Request(), c.Response())
+		mn.Set("token", rt.Token)
+		mn.Set("secret", rt.Secret)
+
+		err = mn.Save(c.Request(), c.Response())
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to write session", err))
 		}
@@ -51,38 +85,51 @@ func TwitterCallback() echo.HandlerFunc {
 		if err := c.Bind(q); err != nil {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to read callback", err))
 		}
-		sess, err := session.Get("session", c)
+
+		mn, err := session.NewManager("request", &c)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session", err))
 		}
-		reqt, ok := sess.Values["request_token"].(string)
+
+		reqt, ok := mn.Get("token")
 		if !ok {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (request_token)", reqt))
 		}
 		if reqt != q.OAuthToken {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error at request_token != oauth_token", reqt))
 		}
-		reqts, ok := sess.Values["request_token_secret"].(string)
+		reqts, ok := mn.Get("secret")
 		if !ok {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (request_token_secret)", reqts))
 		}
+
 		code, at, err := client.GetAccessToken(&oauth.Credentials{
-			Token:  reqt,
-			Secret: reqts,
+			Token:  reqt.(string),
+			Secret: reqts.(string),
 		}, q.OAuthVerifier)
 		if err != nil {
 			return c.JSON(code, model.NewResponse(code, "error in getting access tokrn", err))
 		}
-		account := struct {
-			ID         string `json:"id_str"`
-			ScreenName string `json:"screen_name"`
-		}{}
-		code, err = client.GetMe(at, &account)
+
+		account, err := client.GetMe(at)
 		if err != nil {
 			return c.JSON(code, nil)
 		}
 
-		fmt.Println(account)
+		err = mn.Clear(c.Request(), c.Response())
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to delete session", err))
+		}
+
+		atmn, err := session.NewManager("at", &c)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to save access token", err))
+		}
+		atmn.Set("token", at.Token)
+		atmn.Set("secret", at.Secret)
+		if err := atmn.Save(c.Request(), c.Response()); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to save", err))
+		}
 
 		return c.JSON(http.StatusOK, model.NewResponse(http.StatusOK, "ok", account))
 	}
