@@ -1,0 +1,23 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Auto Deploy CI
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: akhileshns/heroku-deploy@v3.4.6 # This is the action
+        with:
+          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+          heroku_app_name: "unfire" # Must be unique in Heroku
+          heroku_email: ${{ secrets.HEROKU_EMAIL_ADDRESS }}
+          usedocker: true
+          healthcheck: "https://unfire.herokuapp.com/api/v1/health"
