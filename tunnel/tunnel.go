@@ -7,10 +7,13 @@ import (
 )
 
 var c chan worker.User
+var w chan worker.User
 
 func init() {
 	c = make(chan worker.User)
-	go worker.RunTask(c)
+	w = make(chan worker.User)
+	go worker.RunTaskChannel(c, w)
+	go worker.WaitingTaskChannel(c, w)
 }
 
 func AddUserByCredentials(token string, secret string) error {

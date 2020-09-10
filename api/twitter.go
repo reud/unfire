@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/garyburd/go-oauth/oauth"
 	"github.com/labstack/echo/v4"
+	"log"
 	"net/http"
 	"unfire/client"
 	"unfire/model"
@@ -49,6 +50,7 @@ func LoginByTwitter() echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to create session", err))
 		}
 		if ok {
+			log.Printf("atはすでに存在しています.")
 			account := struct {
 				AT     string `json:"access_token"`
 				ATS    string `json:"access_token_secret"`

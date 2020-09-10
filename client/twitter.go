@@ -2,14 +2,16 @@ package client
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/garyburd/go-oauth/oauth"
 	"github.com/pkg/errors"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"path"
 	"time"
 	"unfire/config"
+	"unfire/model"
 )
 
 const (
@@ -18,6 +20,7 @@ const (
 	accessTokenURL   = "https://api.twitter.com/oauth/access_token"
 	accountURL       = "https://api.twitter.com/1.1/account/verify_credentials.json"
 	searchTweetURL   = "https://api.twitter.com/1.1/statuses/user_timeline.json"
+	destroyTweetURL  = "https://api.twitter.com/1.1/statuses/destroy"
 )
 
 type MyData struct {
@@ -97,10 +100,11 @@ func getUntilQuery() string {
 	return time.Now().Add(-time.Duration(24) * time.Hour).String()[:10]
 }
 
-func GetSearchTweets(at *oauth.Credentials, username string) error {
+func GetSearchTweets(at *oauth.Credentials, username string) ([]model.TweetSimple, error) {
+	var tweets []model.TweetSimple
 	u, err := url.Parse(searchTweetURL)
 	if err != nil {
-		return err
+		return tweets, err
 	}
 
 	q := u.Query()
@@ -108,16 +112,35 @@ func GetSearchTweets(at *oauth.Credentials, username string) error {
 	oc := NewTWClient()
 	resp, err := oc.Get(nil, at, u.String(), q)
 	if err != nil {
-		return err
+		return tweets, err
 	}
 
 	// TODO Tweetを構造体に直し、idを抽出する。
 	// body
 	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&tweets)
+	if err != nil {
+		return tweets, err
+	}
+	return tweets, nil
+}
+
+func DestroyTweet(at *oauth.Credentials, tweetID string) error {
+	u, err := url.Parse(destroyTweetURL)
+	if err != nil {
+		return err
+	}
+	u.Path = path.Join(u.Path, tweetID+".json")
+	oc := NewTWClient()
+	resp, err := oc.Post(nil, at, u.String(), nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%+v", string(body))
+	log.Printf("%+v", string(body))
 	return nil
 }
