@@ -1,5 +1,12 @@
 # unfire
 
+# TODO(やる順)
+- 昨日(安定を取って二日前？)ツイートしたものだけ削除
+  - これが出来たらdeployして稼働させる
+- リファクタ
+- いいねの削除
+- 毎回認証させる？(そもそもセッション(Cookie)にアクセストークンおくのおkなん？__)
+
 - running as direct
 
 `root/scripts/manager.sh run direct`
