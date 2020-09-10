@@ -17,7 +17,7 @@ type TwitterCallBackQuery struct {
 }
 
 const (
-	callbackURL = "http://127.0.0.1:8080/api/v1/auth/callback"
+	callbackURL = "https://unfire.herokuapp.com/api/v1/auth/callback"
 )
 
 func pickAccessToken(c *echo.Context) (string, string, bool, error) {
