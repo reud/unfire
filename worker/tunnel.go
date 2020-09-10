@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 	"unfire/client"
+	"unfire/model"
 )
 
 type User struct {
@@ -12,6 +13,10 @@ type User struct {
 	Token       string
 	TokenSecret string
 }
+
+const (
+	DaysBefore = 32
+)
 
 func RunTaskChannel(cl chan User, wa chan User) {
 	for u := range cl {
@@ -21,9 +26,22 @@ func RunTaskChannel(cl chan User, wa chan User) {
 
 func WaitingTaskChannel(cl chan User, wa chan User) {
 	for u := range wa {
-		time.Sleep(time.Minute * 3)
+		time.Sleep(time.Minute * 15)
 		cl <- u
 	}
+}
+
+func isOldTweet(ms *model.TweetSimple) (bool, error) {
+	t, err := time.Parse("Mon Jan 2 15:04:05 -0700 2006", ms.CreatedAt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ago := time.Since(t)
+
+	if ago > time.Hour*DaysBefore {
+		return true, nil
+	}
+	return false, nil
 }
 
 func runTask(u *User, waiting chan User) {
@@ -45,10 +63,18 @@ func runTask(u *User, waiting chan User) {
 	for _, tw := range tts {
 		tweet := tw
 		go func() {
+			ok, err := isOldTweet(&tweet)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+			if !ok {
+				return
+			}
 			if err := client.DestroyTweet(at, tweet.IDStr); err != nil {
 				log.Fatal(err)
 			}
-			log.Printf("destroy tweet : %+v", tweet.Text)
+			log.Printf("destroied tweet : %+v", tweet.Text)
 		}()
 	}
 }

@@ -109,6 +109,7 @@ func GetSearchTweets(at *oauth.Credentials, username string) ([]model.TweetSimpl
 
 	q := u.Query()
 	q.Set("screen_name", username)
+	q.Set("count", "150")
 	oc := NewTWClient()
 	resp, err := oc.Get(nil, at, u.String(), q)
 	if err != nil {
