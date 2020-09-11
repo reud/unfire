@@ -3,12 +3,10 @@ package api
 import (
 	"github.com/garyburd/go-oauth/oauth"
 	"github.com/labstack/echo/v4"
-	"log"
 	"net/http"
 	"unfire/client"
 	"unfire/model"
 	"unfire/session"
-	"unfire/tunnel"
 )
 
 type TwitterCallBackQuery struct {
@@ -36,56 +34,12 @@ func pickAccessToken(c *echo.Context) (string, string, bool, error) {
 	return t.(string), s.(string), true, nil
 }
 
-func ForceLoginByTwitter() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		oc := client.NewTWClient()
-		rt, err := oc.RequestTemporaryCredentials(nil, callbackURL, nil)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, err)
-		}
-		mn, err := session.NewManager("request", &c)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting sessio　in planting req,reqt", err))
-		}
-
-		mn.Set("token", rt.Token)
-		mn.Set("secret", rt.Secret)
-
-		err = mn.Save(c.Request(), c.Response())
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to write session", err))
-		}
-
-		url := oc.AuthorizationURL(rt, nil)
-
-		return c.Redirect(http.StatusMovedPermanently, url)
-	}
-}
-
 func LoginByTwitter() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		oc := client.NewTWClient()
 		rt, err := oc.RequestTemporaryCredentials(nil, callbackURL, nil)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, err)
-		}
-
-		// もしもすでにアクセストークンがある場合
-		t, s, ok, err := pickAccessToken(&c)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to create session", err))
-		}
-		if ok {
-			log.Printf("atはすでに存在しています.")
-			account := struct {
-				AT     string `json:"access_token"`
-				ATS    string `json:"access_token_secret"`
-				Status string `json:"status"`
-			}{AT: t, ATS: s, Status: "OK"}
-			if err := tunnel.AddUserByCredentials(t, s); err != nil {
-				return c.JSON(http.StatusInternalServerError, model.NewResponse(http.StatusInternalServerError, "failed to add tunnel", err))
-			}
-			return c.JSON(http.StatusOK, model.NewResponse(http.StatusOK, "ok lets go.", account))
 		}
 
 		mn, err := session.NewManager("request", &c)
@@ -147,16 +101,6 @@ func TwitterCallback() echo.HandlerFunc {
 		err = mn.Clear(c.Request(), c.Response())
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to delete session", err))
-		}
-
-		atmn, err := session.NewManager("at", &c)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to save access token", err))
-		}
-		atmn.Set("token", at.Token)
-		atmn.Set("secret", at.Secret)
-		if err := atmn.Save(c.Request(), c.Response()); err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to save", err))
 		}
 
 		return c.JSON(http.StatusOK, model.NewResponse(http.StatusOK, "ok", account))
