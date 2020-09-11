@@ -25,7 +25,6 @@ func Init() *echo.Echo {
 		{
 			auth.GET("/login", api.LoginByTwitter())
 			auth.GET("/callback", api.TwitterCallback())
-			auth.GET("/force", api.ForceLoginByTwitter())
 		}
 		v1.GET("/health", api.Health())
 	}

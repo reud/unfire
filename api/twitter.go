@@ -19,22 +19,6 @@ const (
 	callbackURL = "https://unfire.herokuapp.com/api/v1/auth/callback"
 )
 
-func pickAccessToken(c *echo.Context) (string, string, bool, error) {
-	atmn, err := session.NewManager("at", c)
-	if err != nil {
-		return "", "", false, err
-	}
-	t, ok := atmn.Get("token")
-	if !ok {
-		return "", "", false, nil
-	}
-	s, ok := atmn.Get("secret")
-	if !ok {
-		return "", "", false, nil
-	}
-	return t.(string), s.(string), true, nil
-}
-
 func LoginByTwitter() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		oc := client.NewTWClient()
