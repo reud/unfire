@@ -7,6 +7,7 @@ import (
 	"unfire/client"
 	"unfire/model"
 	"unfire/session"
+	"unfire/tunnel"
 )
 
 type TwitterCallBackQuery struct {
@@ -103,6 +104,9 @@ func TwitterCallback() echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to delete session", err))
 		}
 
+		if err := tunnel.AddUserByCredentials(at.Token, at.Secret); err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to add user", err))
+		}
 		return c.JSON(http.StatusOK, model.NewResponse(http.StatusOK, "ok", account))
 	}
 

@@ -21,7 +21,7 @@ func AddUserByCredentials(token string, secret string) error {
 	if err != nil {
 		return err
 	}
-	c <- worker.User{
+	w <- worker.User{
 		Username:    *un,
 		Token:       token,
 		TokenSecret: secret,
