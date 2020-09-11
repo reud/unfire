@@ -36,6 +36,32 @@ func pickAccessToken(c *echo.Context) (string, string, bool, error) {
 	return t.(string), s.(string), true, nil
 }
 
+func ForceLoginByTwitter() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		oc := client.NewTWClient()
+		rt, err := oc.RequestTemporaryCredentials(nil, callbackURL, nil)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, err)
+		}
+		mn, err := session.NewManager("request", &c)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting sessio　in planting req,reqt", err))
+		}
+
+		mn.Set("token", rt.Token)
+		mn.Set("secret", rt.Secret)
+
+		err = mn.Save(c.Request(), c.Response())
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to write session", err))
+		}
+
+		url := oc.AuthorizationURL(rt, nil)
+
+		return c.Redirect(http.StatusMovedPermanently, url)
+	}
+}
+
 func LoginByTwitter() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		oc := client.NewTWClient()
