@@ -9,7 +9,7 @@ import (
 )
 
 type User struct {
-	Username    string
+	UserID      string
 	Token       string
 	TokenSecret string
 }
@@ -26,8 +26,11 @@ func RunTaskChannel(cl chan User, wa chan User) {
 
 func WaitingTaskChannel(cl chan User, wa chan User) {
 	for u := range wa {
-		time.Sleep(time.Minute * 15)
-		cl <- u
+		user := u
+		go func() {
+			time.Sleep(time.Minute * 15)
+			cl <- user
+		}()
 	}
 }
 
@@ -54,13 +57,24 @@ func runTask(u *User, waiting chan User) {
 		Token:  u.Token,
 		Secret: u.TokenSecret,
 	}
-	log.Printf("tweet pickking from: %+v", u.Username)
-	tts, err := client.GetSearchTweets(at, u.Username)
+
+	log.Printf("tweet pickking from: %+v", u.UserID)
+	tts, err := client.GetSearchTweets(at, u.UserID)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("tweet picked len: %+v", len(tts))
-	for _, tw := range tts {
+	go runDeleteTweetTask(&tts, at)
+
+	likes, err := client.GetUserFavoriteTweets(at, u.UserID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	go runDeleteFavoritesTask(&likes, at)
+}
+
+func runDeleteTweetTask(tts *[]model.TweetSimple, at *oauth.Credentials) {
+	for _, tw := range *tts {
 		tweet := tw
 		go func() {
 			ok, err := isOldTweet(&tweet)
@@ -75,6 +89,22 @@ func runTask(u *User, waiting chan User) {
 				log.Fatal(err)
 			}
 			log.Printf("destroied tweet : %+v", tweet.Text)
+		}()
+	}
+}
+
+func runDeleteFavoritesTask(tts *[]model.TweetSimple, at *oauth.Credentials) {
+	if len(*tts) < 30 {
+		log.Printf("いいねが許容範囲内のため削除を中止します。")
+		return
+	}
+	for _, tw := range *tts {
+		tweet := tw
+		go func() {
+			if err := client.DestroyFavorites(at, tweet.IDStr); err != nil {
+				log.Fatal(err)
+			}
+			log.Printf("destroied fav : %+v", tweet.Text)
 		}()
 	}
 }

@@ -17,15 +17,15 @@ func init() {
 }
 
 func AddUserByCredentials(token string, secret string) error {
-	un, err := client.GetUsername(token, secret)
+	ui, err := client.GetUserID(token, secret)
 	if err != nil {
 		return err
 	}
 	w <- worker.User{
-		Username:    *un,
+		UserID:      *ui,
 		Token:       token,
 		TokenSecret: secret,
 	}
-	log.Printf("joined: %+v", *un)
+	log.Printf("joined: %+v", *ui)
 	return nil
 }

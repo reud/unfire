@@ -15,12 +15,14 @@ import (
 )
 
 const (
-	refreshTokenURL  = "https://api.twitter.com/oauth/request_token"
-	authorizationURL = "https://api.twitter.com/oauth/authenticate"
-	accessTokenURL   = "https://api.twitter.com/oauth/access_token"
-	accountURL       = "https://api.twitter.com/1.1/account/verify_credentials.json"
-	searchTweetURL   = "https://api.twitter.com/1.1/statuses/user_timeline.json"
-	destroyTweetURL  = "https://api.twitter.com/1.1/statuses/destroy"
+	refreshTokenURL     = "https://api.twitter.com/oauth/request_token"
+	authorizationURL    = "https://api.twitter.com/oauth/authenticate"
+	accessTokenURL      = "https://api.twitter.com/oauth/access_token"
+	accountURL          = "https://api.twitter.com/1.1/account/verify_credentials.json"
+	searchTweetURL      = "https://api.twitter.com/1.1/statuses/user_timeline.json"
+	destroyTweetURL     = "https://api.twitter.com/1.1/statuses/destroy"
+	getFavoritesURL     = "https://api.twitter.com/1.1/favorites/list.json"
+	destroyFavoritesURL = "https://api.twitter.com/1.1/favorites/destroy.json"
 )
 
 type MyData struct {
@@ -53,7 +55,7 @@ func GetAccessToken(rt *oauth.Credentials, oauthVerifier string) (int, *oauth.Cr
 	return http.StatusOK, at, nil
 }
 
-func GetUsername(token string, secret string) (*string, error) {
+func GetUserID(token string, secret string) (*string, error) {
 	at := &oauth.Credentials{
 		Token:  token,
 		Secret: secret,
@@ -62,7 +64,7 @@ func GetUsername(token string, secret string) (*string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &d.ScreenName, err
+	return &d.ID, err
 }
 
 func GetMe(at *oauth.Credentials) (*MyData, error) {
@@ -100,7 +102,7 @@ func getUntilQuery() string {
 	return time.Now().Add(-time.Duration(24) * time.Hour).String()[:10]
 }
 
-func GetSearchTweets(at *oauth.Credentials, username string) ([]model.TweetSimple, error) {
+func GetSearchTweets(at *oauth.Credentials, userID string) ([]model.TweetSimple, error) {
 	var tweets []model.TweetSimple
 	u, err := url.Parse(searchTweetURL)
 	if err != nil {
@@ -108,7 +110,7 @@ func GetSearchTweets(at *oauth.Credentials, username string) ([]model.TweetSimpl
 	}
 
 	q := u.Query()
-	q.Set("screen_name", username)
+	q.Set("user_id", userID)
 	q.Set("count", "150")
 	oc := NewTWClient()
 	resp, err := oc.Get(nil, at, u.String(), q)
@@ -144,4 +146,54 @@ func DestroyTweet(at *oauth.Credentials, tweetID string) error {
 	}
 	log.Printf("%+v", string(body))
 	return nil
+}
+
+func DestroyFavorites(at *oauth.Credentials, tweetID string) error {
+	u, err := url.Parse(destroyFavoritesURL)
+	if err != nil {
+		return err
+	}
+
+	q := u.Query()
+	q.Set("id", tweetID)
+
+	oc := NewTWClient()
+	resp, err := oc.Post(nil, at, u.String(), q)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	log.Printf("%+v", string(body))
+	return nil
+}
+
+func GetUserFavoriteTweets(at *oauth.Credentials, userID string) ([]model.TweetSimple, error) {
+	var tweets []model.TweetSimple
+	u, err := url.Parse(getFavoritesURL)
+	if err != nil {
+		return tweets, err
+	}
+
+	q := u.Query()
+	q.Set("user_id", userID)
+	q.Set("count", "150")
+	oc := NewTWClient()
+	resp, err := oc.Get(nil, at, u.String(), q)
+	if err != nil {
+		return tweets, err
+	}
+
+	// TODO Tweetを構造体に直し、idを抽出する。
+	// body
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&tweets)
+	if err != nil {
+		return tweets, err
+	}
+	return tweets, nil
 }
