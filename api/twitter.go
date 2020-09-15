@@ -16,7 +16,7 @@ type TwitterCallBackQuery struct {
 }
 
 const (
-	callbackURL = "https://unfire.reud.net/api/v1/auth/callback"
+	callbackURL = "https://unfire.reud.app/api/v1/auth/callback"
 )
 
 func LoginByTwitter() echo.HandlerFunc {
