@@ -12,12 +12,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: akhileshns/heroku-deploy@v3.4.6 # This is the action
-        with:
-          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: "unfire" # Must be unique in Heroku
-          heroku_email: ${{ secrets.HEROKU_EMAIL_ADDRESS }}
-          usedocker: true
-          healthcheck: "https://unfire.herokuapp.com/api/v1/health"
+  steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - id: deploy
+      name: Deploy to dokku
+      uses: idoberko2/dokku-deploy-github-action@v1
+      with:
+        ssh-private-key: ${{ secrets.DOKKU_SSH_KEY }}
+        dokku-host: 'reud.app'
+        app-name: 'unfire'
