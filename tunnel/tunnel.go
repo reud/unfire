@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"log"
+	"time"
 	"unfire/client"
 	"unfire/worker"
 )
@@ -12,8 +13,24 @@ var w chan worker.User
 func init() {
 	c = make(chan worker.User)
 	w = make(chan worker.User)
-	go worker.RunTaskChannel(c, w)
-	go worker.WaitingTaskChannel(c, w)
+	go runTaskChannel(c, w)
+	go waitingTaskChannel(c, w)
+}
+
+func runTaskChannel(cl chan worker.User, wa chan worker.User) {
+	for u := range cl {
+		go worker.RunTask(&u, wa)
+	}
+}
+
+func waitingTaskChannel(cl chan worker.User, wa chan worker.User) {
+	for u := range wa {
+		user := u
+		go func() {
+			time.Sleep(time.Minute * 15)
+			cl <- user
+		}()
+	}
 }
 
 func AddUserByCredentials(token string, secret string) error {

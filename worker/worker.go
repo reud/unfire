@@ -18,22 +18,6 @@ const (
 	DaysBefore = 32
 )
 
-func RunTaskChannel(cl chan User, wa chan User) {
-	for u := range cl {
-		go runTask(&u, wa)
-	}
-}
-
-func WaitingTaskChannel(cl chan User, wa chan User) {
-	for u := range wa {
-		user := u
-		go func() {
-			time.Sleep(time.Minute * 15)
-			cl <- user
-		}()
-	}
-}
-
 func isOldTweet(ms *model.TweetSimple) (bool, error) {
 	t, err := time.Parse("Mon Jan 2 15:04:05 -0700 2006", ms.CreatedAt)
 	if err != nil {
@@ -47,7 +31,7 @@ func isOldTweet(ms *model.TweetSimple) (bool, error) {
 	return false, nil
 }
 
-func runTask(u *User, waiting chan User) {
+func RunTask(u *User, waiting chan User) {
 
 	defer func() {
 		waiting <- *u
