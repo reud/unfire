@@ -6,13 +6,8 @@ import (
 	"time"
 	"unfire/client"
 	"unfire/model"
+	"unfire/worker/hook"
 )
-
-type User struct {
-	UserID      string
-	Token       string
-	TokenSecret string
-}
 
 const (
 	DaysBefore = 32
@@ -31,18 +26,23 @@ func isOldTweet(ms *model.TweetSimple) (bool, error) {
 	return false, nil
 }
 
-func RunTask(u *User, waiting chan User) {
+func RunTask(u *model.User, waiting chan model.User) {
 
 	defer func() {
 		waiting <- *u
 	}()
+
+	var err error
+	err = hook.PreRunTaskHook(u)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	at := &oauth.Credentials{
 		Token:  u.Token,
 		Secret: u.TokenSecret,
 	}
 
-	log.Printf("tweet pickking from: %+v", u.UserID)
 	tts, err := client.GetSearchTweets(at, u.UserID)
 	if err != nil {
 		log.Fatal(err)

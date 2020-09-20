@@ -4,26 +4,27 @@ import (
 	"log"
 	"time"
 	"unfire/client"
+	"unfire/model"
 	"unfire/worker"
 )
 
-var c chan worker.User
-var w chan worker.User
+var c chan model.User
+var w chan model.User
 
 func init() {
-	c = make(chan worker.User)
-	w = make(chan worker.User)
+	c = make(chan model.User)
+	w = make(chan model.User)
 	go runTaskChannel(c, w)
 	go waitingTaskChannel(c, w)
 }
 
-func runTaskChannel(cl chan worker.User, wa chan worker.User) {
+func runTaskChannel(cl chan model.User, wa chan model.User) {
 	for u := range cl {
 		go worker.RunTask(&u, wa)
 	}
 }
 
-func waitingTaskChannel(cl chan worker.User, wa chan worker.User) {
+func waitingTaskChannel(cl chan model.User, wa chan model.User) {
 	for u := range wa {
 		user := u
 		go func() {
@@ -38,7 +39,7 @@ func AddUserByCredentials(token string, secret string) error {
 	if err != nil {
 		return err
 	}
-	w <- worker.User{
+	w <- model.User{
 		UserID:      *ui,
 		Token:       token,
 		TokenSecret: secret,
