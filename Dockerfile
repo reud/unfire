@@ -3,6 +3,8 @@ FROM golang:latest as builder
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
+ENV TZ=Asia/Tokyo
+
 WORKDIR /go/src/github.com/reud/unfire
 COPY . .
 RUN go build main.go
