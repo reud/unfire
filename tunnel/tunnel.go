@@ -34,7 +34,7 @@ func waitingTaskChannel(cl chan model.User, wa chan model.User) {
 	}
 }
 
-func AddUserByCredentials(token string, secret string) error {
+func AddUserByCredentials(token string, secret string, options model.Options) error {
 	ui, err := client.GetUserID(token, secret)
 	if err != nil {
 		return err
@@ -43,6 +43,7 @@ func AddUserByCredentials(token string, secret string) error {
 		UserID:      *ui,
 		Token:       token,
 		TokenSecret: secret,
+		Options:     options,
 	}
 	log.Printf("joined: %+v", *ui)
 	return nil
