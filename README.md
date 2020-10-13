@@ -8,7 +8,7 @@
 | delete\_like\_count                | number  | 30    | (delete\_likeがtrueの時使用)<br>何件以上になったらいいねを削除するか( 1以上1000未満で指定)                                         |                                                                  |
 | keep\_legendary\_tweet\_v1\_enable | boolean | FALSE | バズったツイートを削除するかどうか                                                                                    |                                                                  |
 | keep\_legendary\_tweet\_v1\_border | number  | 20000 | (keey\_legendary\_tweet\_v1\_countがtrueの時使用)<br>ここに指定された数以上のいいねがついたツイートは削除しない<br>(15以上10000000未満で指定) | 取ってきたツイートに対して、<br>filterしているだけなので 150件以上これに入ると<br>ツイートが削除されなくなる。 |
-
+| callback\_url                      | string  | nil   | 実行完了時の遷移先
 # TODO(やる順)
 - 昨日(安定を取って二日前？)ツイートしたものだけ削除
   - これが出来たらdeployして稼働させる

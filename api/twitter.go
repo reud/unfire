@@ -1,9 +1,11 @@
 package api
 
 import (
+	"errors"
 	"github.com/garyburd/go-oauth/oauth"
 	"github.com/labstack/echo/v4"
 	"net/http"
+	"net/url"
 	"strconv"
 	"unfire/client"
 	"unfire/model"
@@ -63,6 +65,14 @@ func LoginByTwitter() echo.HandlerFunc {
 			mn.Set("keep_legendary_tweet_v1_enable", "true")
 		}
 
+		if c.QueryParam("callback_url") != "" {
+			cb, err := url.Parse(c.QueryParam("callback_url"))
+			if err != nil {
+				return c.JSON(http.StatusBadGateway, model.NewResponse(http.StatusBadRequest, "invalid callback url", err))
+			}
+			mn.Set("callback_url", cb.String())
+		}
+
 		mn.Set("token", rt.Token)
 		mn.Set("secret", rt.Secret)
 
@@ -71,9 +81,9 @@ func LoginByTwitter() echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to write session", err))
 		}
 
-		url := oc.AuthorizationURL(rt, nil)
+		u := oc.AuthorizationURL(rt, nil)
 
-		return c.Redirect(http.StatusMovedPermanently, url)
+		return c.Redirect(http.StatusMovedPermanently, u)
 	}
 }
 
@@ -114,39 +124,9 @@ func TwitterCallback() echo.HandlerFunc {
 			return c.JSON(code, nil)
 		}
 
-		op := model.Options{
-			DeleteLike:                 false,
-			DeleteLikeCount:            0,
-			KeepLegendaryTweetV1Enable: false,
-			KeepLegendaryTweetV1Border: 0,
-		}
-
-		deleteLike, ok := mn.Get("delete_like")
-		if ok && deleteLike == "true" {
-			op.DeleteLike = true
-			cntStr, ok := mn.Get("delete_like_count")
-			if !ok {
-				return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (delete_like_count)", cntStr))
-			}
-			cnt, err := strconv.Atoi(cntStr.(string))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (delete_like_count)", cntStr))
-			}
-			op.DeleteLikeCount = cnt
-		}
-
-		keepLegendaryTweetV1, ok := mn.Get("keep_legendary_tweet_v1_enable")
-		if ok && keepLegendaryTweetV1 == "true" {
-			op.KeepLegendaryTweetV1Enable = true
-			cntStr, ok := mn.Get("keep_legendary_tweet_v1_border")
-			if !ok {
-				return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (keep_legendary_tweet_v1_border)", cntStr))
-			}
-			cnt, err := strconv.Atoi(cntStr.(string))
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "error in getting session value (keep_legendary_tweet_v1_border)", cntStr))
-			}
-			op.KeepLegendaryTweetV1Border = cnt
+		op, err := getOptions(mn)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to get options", err))
 		}
 
 		err = mn.Clear(c.Request(), c.Response())
@@ -154,10 +134,66 @@ func TwitterCallback() echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to delete session", err))
 		}
 
-		if err := tunnel.AddUserByCredentials(at.Token, at.Secret, op); err != nil {
+		if err := tunnel.AddUserByCredentials(at.Token, at.Secret, *op); err != nil {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to add user", err))
 		}
+
+		if op.CallbackURL != "" {
+			u, err := url.Parse(op.CallbackURL)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "callback url corrupted (set: ok get: failed)", err))
+			}
+			q := u.Query()
+			q.Set("status", "ok")
+			u.RawQuery = q.Encode()
+			return c.Redirect(http.StatusMovedPermanently, u.String())
+		}
+
 		return c.JSON(http.StatusOK, model.NewResponse(http.StatusOK, "ok", account))
 	}
 
+}
+
+func getOptions(mn *session.Manager) (*model.Options, error) {
+	op := &model.Options{
+		DeleteLike:                 false,
+		DeleteLikeCount:            0,
+		KeepLegendaryTweetV1Enable: false,
+		KeepLegendaryTweetV1Border: 0,
+		CallbackURL:                "",
+	}
+
+	deleteLike, ok := mn.Get("delete_like")
+	if ok && deleteLike == "true" {
+		op.DeleteLike = true
+		cntStr, ok := mn.Get("delete_like_count")
+		if !ok {
+			return nil, errors.New("error in getting session value (delete_like_count)")
+		}
+		cnt, err := strconv.Atoi(cntStr.(string))
+		if err != nil {
+			return nil, err
+		}
+		op.DeleteLikeCount = cnt
+	}
+
+	keepLegendaryTweetV1, ok := mn.Get("keep_legendary_tweet_v1_enable")
+	if ok && keepLegendaryTweetV1 == "true" {
+		op.KeepLegendaryTweetV1Enable = true
+		cntStr, ok := mn.Get("keep_legendary_tweet_v1_border")
+		if !ok {
+			return nil, errors.New("error in getting session value (keep_legendary_tweet_v1_border)")
+		}
+		cnt, err := strconv.Atoi(cntStr.(string))
+		if err != nil {
+			return nil, err
+		}
+		op.KeepLegendaryTweetV1Border = cnt
+	}
+
+	callbackURL, ok := mn.Get("callback_url")
+	if ok && callbackURL != "" {
+		op.CallbackURL = callbackURL.(string)
+	}
+	return op, nil
 }

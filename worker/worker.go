@@ -36,6 +36,7 @@ func RunTask(u *model.User, waiting chan model.User) {
 	err = hook.PreRunTaskHook(u)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
 	at := &oauth.Credentials{
@@ -46,7 +47,15 @@ func RunTask(u *model.User, waiting chan model.User) {
 	tts, err := client.GetSearchTweets(at, u.UserID)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
+
+	tts, err = hook.BeforeRunTaskHook(u, tts)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
 	log.Printf("tweet picked len: %+v", len(tts))
 	go runDeleteTweetTask(&tts, at)
 
