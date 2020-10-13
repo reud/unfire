@@ -45,7 +45,7 @@ func LoginByTwitter() echo.HandlerFunc {
 			if err != nil {
 				return c.JSON(http.StatusBadGateway, model.NewResponse(http.StatusBadRequest, "failed to read delete_like_count parameter, missing?", err))
 			}
-			if minimumDeleteCount <= deleteLikeCnt && deleteLikeCnt <= maximumDeleteCount {
+			if !(minimumDeleteCount <= deleteLikeCnt && deleteLikeCnt <= maximumDeleteCount) {
 				return c.JSON(http.StatusBadGateway, model.NewResponse(http.StatusBadRequest, "delete_like_cnt out of range", err))
 			}
 			mn.Set("delete_like_count", deleteLikeCntStr)
