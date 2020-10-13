@@ -58,8 +58,8 @@ func LoginByTwitter() echo.HandlerFunc {
 			if err != nil {
 				return c.JSON(http.StatusBadGateway, model.NewResponse(http.StatusBadRequest, "failed to read delete_like_count parameter, missing?", err))
 			}
-			if minimumBorderCount <= keepLegendaryTweetV1Border && keepLegendaryTweetV1Border <= maximumBorderCount {
-				return c.JSON(http.StatusBadGateway, model.NewResponse(http.StatusBadRequest, "delete_like_cnt out of range", err))
+			if !(minimumBorderCount <= keepLegendaryTweetV1Border && keepLegendaryTweetV1Border <= maximumBorderCount) {
+				return c.JSON(http.StatusBadGateway, model.NewResponse(http.StatusBadRequest, "keep_legendary_tweet_v1_border out of range", err))
 			}
 			mn.Set("keep_legendary_tweet_v1_border", keepLegendaryTweetV1BorderStr)
 			mn.Set("keep_legendary_tweet_v1_enable", "true")
