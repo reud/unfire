@@ -1,6 +1,26 @@
 # unfire
 
+ツイートして一定時間経ったツイートを削除するアプリケーション(オプションでいいねも削除出来るよ！)
+
+![logo](https://user-images.githubusercontent.com/31179220/96333627-089c2b00-10a6-11eb-9e57-43aa0e9c14ee.jpg)
+
+## usage
+
+### portal.reud.net
+
+https://portal.reud.net/unfire
+
+### direct
+
+ここにアクセス
+
+https://unfire.reud.app/api/v1/auth/login
+
 ## Options
+
+https://unfire.reud.app/api/v1/auth/login
+
+URLパラメータを付加してオプションの設定が可能になります。
 
 | パラメータ                              | タイプ     | デフォルト | 内容                                                                                                   | 補足                                                               |
 | ---------------------------------- | ------- | ----- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
@@ -18,15 +38,15 @@
 
 - running as direct
 
-`root/scripts/manager.sh run direct`
+`<project-root>/scripts/manager.sh run direct`
 
 - running with docker
 
-`root/scripts/manager.sh run docker`
+`<project-root>/scripts/manager.sh run docker`
 
 - health
 
-https://unfire.herokuapp.com/api/v1/health
+http://unfire.reud.app/health
 
 # 参考
 
