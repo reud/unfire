@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 	echoMw "github.com/labstack/echo/v4/middleware"
 	"unfire/api"
+	"unfire/interface/handler"
 )
 
 func Init() *echo.Echo {
@@ -18,14 +19,17 @@ func Init() *echo.Echo {
 	}))
 	e.Use(echoMw.Logger())
 
+	ah := handler.NewAuthHandler()
+	auth := e.Group("/auth")
+	{
+		auth.GET("/login", ah.GetLogin())
+		auth.GET("/callback", ah.GetCallback())
+	}
+
 	// routes
 	v1 := e.Group("/api/v1")
 	{
-		auth := v1.Group("/auth")
-		{
-			auth.GET("/login", api.LoginByTwitter())
-			auth.GET("/callback", api.TwitterCallback())
-		}
+
 		v1.GET("/health", api.Health())
 	}
 	return e

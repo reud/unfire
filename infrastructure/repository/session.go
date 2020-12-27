@@ -1,10 +1,11 @@
-package session
+package repository
 
 import (
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"net/http"
+	"unfire/domain/repository"
 )
 
 type Manager struct {
@@ -12,7 +13,7 @@ type Manager struct {
 	key     string
 }
 
-func NewManager(key string, c *echo.Context) (*Manager, error) {
+func NewManager(key string, c *echo.Context) (repository.SessionRepository, error) {
 	sess, err := session.Get(key, *c)
 	if err != nil {
 		return nil, err
@@ -31,7 +32,7 @@ func (sm *Manager) Set(key string, value string) {
 }
 
 func (sm *Manager) Save(req *http.Request, res *echo.Response) error {
-	return sm.session.Save(req, *res)
+	return sm.session.Save(req, res)
 }
 
 func (sm *Manager) Clear(req *http.Request, res *echo.Response) error {
