@@ -16,6 +16,10 @@ https://portal.reud.net/unfire
 
 https://unfire.reud.app/api/v1/auth/login
 
+### redis
+
+docker run --name redis -d -p 6379:6379 redis redis-server --appendonly yes
+
 ## Options
 
 https://unfire.reud.app/api/v1/auth/login

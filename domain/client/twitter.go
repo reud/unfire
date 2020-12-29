@@ -22,8 +22,9 @@ func SinceId(sinceId string) FetchTweetOptionFunc {
 }
 
 type TwitterClient interface {
+	FetchMe() *model.WorkerData
 	FetchTweets(options ...FetchTweetOptionFunc) ([]model.Tweet, error)
-	FetchFavorites() error
+	FetchFavorites() ([]model.Tweet, error)
 	DestroyTweet(tweetID string) error
 	DestroyFavorite(tweetID string) error
 }

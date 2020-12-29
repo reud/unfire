@@ -1,4 +1,4 @@
-package clients
+package client
 
 import (
 	"encoding/json"
@@ -6,10 +6,8 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"net/url"
 	"path"
-	"time"
 	"unfire/config"
 	"unfire/domain/client"
 	"unfire/domain/model"
@@ -27,18 +25,18 @@ const (
 )
 
 type twitterClient struct {
-	userID string
-	at     *oauth.Credentials
+	UserData *model.WorkerData
+	at       *oauth.Credentials
 }
 
-func NewTwitterClient(at *oauth.Credentials) (*twitterClient, error) {
+func NewTwitterClient(at *oauth.Credentials) (client.TwitterClient, error) {
 	wda, err := fetchProfile(at)
 	if err != nil {
 		return nil, err
 	}
 	return &twitterClient{
-		userID: wda.ID,
-		at:     at,
+		UserData: wda,
+		at:       at,
 	}, nil
 }
 
@@ -71,6 +69,10 @@ func fetchProfile(at *oauth.Credentials) (*model.WorkerData, error) {
 	return data, nil
 }
 
+func (tc *twitterClient) FetchMe() *model.WorkerData {
+	return tc.UserData
+}
+
 func (tc *twitterClient) FetchTweets(options ...client.FetchTweetOptionFunc) ([]model.Tweet, error) {
 	var tweets []model.Tweet
 	u, err := url.Parse(searchTweetURL)
@@ -79,7 +81,33 @@ func (tc *twitterClient) FetchTweets(options ...client.FetchTweetOptionFunc) ([]
 	}
 
 	q := u.Query()
-	q.Set("user_id", tc.userID)
+	q.Set("user_id", tc.UserData.ID)
+	q.Set("count", "150")
+	oc := NewTWClient()
+	resp, err := oc.Get(nil, tc.at, u.String(), q)
+	if err != nil {
+		return tweets, err
+	}
+
+	// TODO Tweetを構造体に直し、idを抽出する。
+	// body
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&tweets)
+	if err != nil {
+		return tweets, err
+	}
+	return tweets, nil
+}
+
+func (tc *twitterClient) FetchFavorites() ([]model.Tweet, error) {
+	var tweets []model.Tweet
+	u, err := url.Parse(getFavoritesURL)
+	if err != nil {
+		return tweets, err
+	}
+
+	q := u.Query()
+	q.Set("user_id", tc.UserData.ID)
 	q.Set("count", "150")
 	oc := NewTWClient()
 	resp, err := oc.Get(nil, tc.at, u.String(), q)
@@ -159,31 +187,4 @@ func NewTWClient() *oauth.Client {
 	}
 
 	return oc
-}
-
-func GetAccessToken(rt *oauth.Credentials, oauthVerifier string) (int, *oauth.Credentials, error) {
-	oc := NewTWClient()
-	at, _, err := oc.RequestToken(nil, rt, oauthVerifier)
-	if err != nil {
-		err := errors.Wrap(err, "Failed to get access token.")
-		return http.StatusBadRequest, nil, err
-	}
-	return http.StatusOK, at, nil
-}
-
-func GetUserID(token string, secret string) (*string, error) {
-	at := &oauth.Credentials{
-		Token:  token,
-		Secret: secret,
-	}
-	d, err := GetMe(at)
-	if err != nil {
-		return nil, err
-	}
-	return &d.ID, err
-}
-
-// YYYY-MM-DD の形式で前日の日付を取得する。
-func getUntilQuery() string {
-	return time.Now().Add(-time.Duration(24) * time.Hour).String()[:10]
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/garyburd/go-oauth/oauth"
+	"github.com/pkg/errors"
 	"unfire/config"
 )
 
@@ -19,6 +20,7 @@ const (
 
 type AuthService interface {
 	RequestTemporaryCredentialsAuthorizationURL() (*oauth.Credentials, string, error)
+	GetAccessToken(rt *oauth.Credentials, oauthVerifier string) (*oauth.Credentials, error)
 }
 
 type authService struct {
@@ -32,6 +34,15 @@ func (as *authService) RequestTemporaryCredentialsAuthorizationURL() (*oauth.Cre
 		return nil, "", err
 	}
 	return rt, as.oauthClient.AuthorizationURL(rt, nil), nil
+}
+
+// GetAccessToken リクエストトークンとベリファイアからアクセストークンを取得する。
+func (as *authService) GetAccessToken(rt *oauth.Credentials, oauthVerifier string) (*oauth.Credentials, error) {
+	at, _, err := as.oauthClient.RequestToken(nil, rt, oauthVerifier)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to get access totken")
+	}
+	return at, nil
 }
 
 func NewAuthService() AuthService {
