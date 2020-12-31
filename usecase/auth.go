@@ -65,11 +65,6 @@ func isnil(x interface{}) bool {
 	return (x == nil) || reflect.ValueOf(x).IsNil()
 }
 
-const (
-	tweetsSuffix = "_tweets"
-	tweetPrefix  = "tweet_"
-)
-
 // Login: 次のURLとerrorを返す。
 func (au *authUseCase) Login(ctx RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error) {
 
@@ -146,7 +141,7 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 
 	op, err := getOptions(mn)
 
-	err = mn.Clear(ctx.Request(), ctx.Response())
+	err = mn.Clear(ctx.Request(), &ctx.Response().Writer)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to clear session")
 	}
@@ -189,34 +184,27 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 		}
 
 		for _, v := range tweets {
-			if err := ds.AppendString(ctx, tc.FetchMe().ID+tweetsSuffix, v.IDStr); err != nil {
+			if err := ds.AppendString(ctx, tc.FetchMe().ID+utils.TweetsSuffix, v.IDStr); err != nil {
 				fmt.Printf("redis error. tweet append failed: %+v", err)
 				return
 			}
 		}
 
-		lnth, err := ds.ListLen(ctx, tc.FetchMe().ID+tweetsSuffix)
+		lnth, err := ds.ListLen(ctx, tc.FetchMe().ID+utils.TweetsSuffix)
 		if err != nil {
 			fmt.Printf("redis error. tweet read(ListLen): %+v", err)
 			return
 		}
-		// ツイートが入っていれば、一番古いツイートを格納する。
+		// ツイートが入っていれば、一番古い時間を格納する。(多分一番最後)
 		if lnth != 0 {
-			oldest, err := ds.GetStringByIndex(ctx, tc.FetchMe().ID+tweetsSuffix, lnth-1)
-			if err != nil {
-				fmt.Printf("redis error (GetStringByIndex) %+v", err)
 
-			}
-			if err := ds.SetString(ctx, tweetPrefix+oldest, tc.FetchMe().ID); err != nil {
-				fmt.Printf("redis error (SetString) %+v", err)
-				return
-			}
-			idi64, err := strconv.ParseInt(oldest, 10, 64)
+			idi64, err := strconv.ParseInt(tweets[len(tweets)-1].CreatedAt, 10, 64)
 			if err != nil {
-				fmt.Printf("tweet idstr parse failed: %+v  original: %+v", err, oldest)
+				fmt.Printf("tweet idstr parse failed: %+v  original: %+v", err, tweets[len(tweets)-1].CreatedAt)
 				return
 			}
-			if err := ds.InsertInt64(ctx, utils.TimeLine, idi64); err != nil {
+
+			if err := ds.Insert(ctx, utils.TimeLine, float64(idi64-utils.TimeLinePrefix), tweets[len(tweets)-1].CreatedAt+"_"+tweets[len(tweets)-1].IDStr); err != nil {
 				fmt.Printf("failed to insert timeline: %+v", err)
 				return
 			}

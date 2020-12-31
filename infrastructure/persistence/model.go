@@ -17,7 +17,9 @@ type Datastore interface {
 	// SortedSetにint64を追加する (score == value)
 	InsertInt64(ctx context.Context, key string, value int64) error
 	// SortedSetの最小値を取得する。
-	GetMinElement(ctx context.Context, key string) (int64, error)
+	GetMinElement(ctx context.Context, key string) (string, error)
 	// PopMin: SortedSetの最小値を削除する。
 	PopMin(ctx context.Context, key string) error
+	// SortedSetに任意の値を追加する。
+	Insert(ctx context.Context, key string, score float64, member interface{}) error
 }

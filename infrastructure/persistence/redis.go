@@ -45,18 +45,25 @@ func (rds *RedisDatastore) InsertInt64(ctx context.Context, key string, value in
 	}).Err()
 }
 
+func (rds *RedisDatastore) Insert(ctx context.Context, key string, score float64, member interface{}) error {
+	return rds.client.ZAdd(ctx, key, &redis.Z{
+		Score:  score,
+		Member: member,
+	}).Err()
+}
+
 // GetMinElement: SortedSetの最小値を返す。
-func (rds *RedisDatastore) GetMinElement(ctx context.Context, key string) (int64, error) {
+func (rds *RedisDatastore) GetMinElement(ctx context.Context, key string) (string, error) {
 	// 最小値を取り出して再度代入する。
 	val, err := rds.client.ZPopMin(ctx, key).Result()
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	x, ok := val[0].Member.(int64)
+	x, ok := val[0].Member.(string)
 	if !ok {
-		return 0, errors.New("failed to convert int64. (GetMinElement)")
+		return "", errors.New("failed to convert string. (GetMinElement)")
 	}
-	if err := rds.InsertInt64(ctx, key, x); err != nil {
+	if err := rds.Insert(ctx, key, val[0].Score, val[0].Member); err != nil {
 		return x, errors.Wrap(err, "failed to reinsert element (GetMinElement)")
 	}
 	return x, nil

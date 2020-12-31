@@ -6,10 +6,12 @@ import (
 	"github.com/labstack/echo/v4"
 	echoMw "github.com/labstack/echo/v4/middleware"
 	"unfire/api"
+	"unfire/domain/service"
 	"unfire/interface/handler"
+	"unfire/usecase"
 )
 
-func Init() *echo.Echo {
+func Init(as service.AuthService, au usecase.AuthUseCase) *echo.Echo {
 	e := echo.New()
 	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 
@@ -20,11 +22,14 @@ func Init() *echo.Echo {
 	e.Use(echoMw.Logger())
 
 	ah := handler.NewAuthHandler()
+
 	auth := e.Group("/auth")
 	{
-		auth.GET("/login", ah.GetLogin())
-		auth.GET("/callback", ah.GetCallback())
+		auth.GET("/login", ah.GetLogin(au, as))
+		auth.GET("/callback", ah.GetCallback(au, as))
 	}
+
+	e.GET("/health", api.Health())
 
 	// routes
 	v1 := e.Group("/api/v1")
