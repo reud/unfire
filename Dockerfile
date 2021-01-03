@@ -10,7 +10,7 @@ COPY . .
 RUN go build main.go
 
 # runtime image
-FROM alpine
+FROM redis
 COPY --from=builder /go/src/github.com/reud/unfire /app
 
 CMD /app/main

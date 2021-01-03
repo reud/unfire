@@ -1,4 +1,4 @@
-package session
+package repository
 
 import (
 	"github.com/gorilla/sessions"
@@ -12,7 +12,7 @@ type Manager struct {
 	key     string
 }
 
-func NewManager(key string, c *echo.Context) (*Manager, error) {
+func NewSessionRepository(key string, c *echo.Context) (*Manager, error) {
 	sess, err := session.Get(key, *c)
 	if err != nil {
 		return nil, err
@@ -30,11 +30,11 @@ func (sm *Manager) Set(key string, value string) {
 	sm.session.Values[key] = value
 }
 
-func (sm *Manager) Save(req *http.Request, res *echo.Response) error {
-	return sm.session.Save(req, res)
+func (sm *Manager) Save(req *http.Request, res *http.ResponseWriter) error {
+	return sm.session.Save(req, *res)
 }
 
-func (sm *Manager) Clear(req *http.Request, res *echo.Response) error {
+func (sm *Manager) Clear(req *http.Request, res *http.ResponseWriter) error {
 	sm.session.Options = &sessions.Options{MaxAge: -1, Path: "/"}
 	return sm.Save(req, res)
 }

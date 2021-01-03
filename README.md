@@ -16,6 +16,10 @@ https://portal.reud.net/unfire
 
 https://unfire.reud.app/api/v1/auth/login
 
+### redis
+
+docker run --name redis -d -p 6379:6379 redis redis-server --appendonly yes
+
 ## Options
 
 https://unfire.reud.app/api/v1/auth/login
@@ -25,7 +29,7 @@ URLパラメータを付加してオプションの設定が可能になりま�
 | パラメータ                              | タイプ     | デフォルト | 内容                                                                                                   | 補足                                                               |
 | ---------------------------------- | ------- | ----- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | delete\_like                       | booleam | FALSE | いいねを削除するかどうか                                                                                         |                                                                  |
-| delete\_like\_count                | number  | 30    | (delete\_likeがtrueの時使用)<br>何件以上になったらいいねを削除するか( 1以上1000未満で指定)                                         |                                                                  |
+| delete\_like\_count                | number  | 30    | (delete\_likeがtrueの時使用)<br>何件以上になったらいいねを削除するか( 1以上1000以下で指定)                                         |                                                                  |
 | keep\_legendary\_tweet\_v1\_enable | boolean | FALSE | バズったツイートを削除するかどうか                                                                                    |                                                                  |
 | keep\_legendary\_tweet\_v1\_border | number  | 20000 | (keey\_legendary\_tweet\_v1\_countがtrueの時使用)<br>ここに指定された数以上のいいねがついたツイートは削除しない<br>(15以上10000000未満で指定) | 取ってきたツイートに対して、<br>filterしているだけなので 150件以上これに入ると<br>ツイートが削除されなくなる。 |
 | callback\_url                      | string  | nil   | 実行完了時の遷移先
@@ -42,15 +46,17 @@ URLパラメータを付加してオプションの設定が可能になりま�
 
 - running with docker
 
-`<project-root>/scripts/manager.sh run docker`
+`./scripts/manager.sh run docker`
 
 - health
 
 http://unfire.reud.app/health
 
+# url
+
+http://localhost:8080/
+
 # 参考
-
-
 
 - [Goで書いたサーバーをHerokuにDocker Deployする - Qiita](https://qiita.com/croquette0212/items/2b85aa2c6b2933244f07)
 - [Heroku Dockerの使い所](https://www.slideshare.net/kon_yu/heroku-docker)
