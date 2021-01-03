@@ -7,7 +7,7 @@ runner() {
     docker build -t unfire .
     # read dotenv
     eval "$(cat .env <(echo) <(declare -x))"
-    docker run -e PORT=8080 -e TWITTER_CONSUMER_KEY="$TWITTER_CONSUMER_KEY" -e TWITTER_CONSUMER_SECRET="$TWITTER_CONSUMER_SECRET" -p 8080:8080 -t unfire
+    docker run -e APP_PORT=8080 -e TWITTER_CONSUMER_KEY="$TWITTER_CONSUMER_KEY" -e TWITTER_CONSUMER_SECRET="$TWITTER_CONSUMER_SECRET" -p 8080:8080 -t unfire
   else
     echo "usage: ./manager.sh { docker | run }"
   fi
