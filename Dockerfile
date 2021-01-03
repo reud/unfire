@@ -10,7 +10,9 @@ COPY . .
 RUN go build main.go
 
 # runtime image
-FROM redis
+FROM ubuntu:14.04
+RUN  apt-get update && apt-get install -y redis-server
+RUN /usr/bin/redis-server
 COPY --from=builder /go/src/github.com/reud/unfire /app
 
 CMD /app/main
