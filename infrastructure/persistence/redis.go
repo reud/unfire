@@ -64,7 +64,7 @@ func (rds *RedisDatastore) GetMinElement(ctx context.Context, key string) (strin
 		return "", errors.New("failed to convert string. (GetMinElement)")
 	}
 	if err := rds.Insert(ctx, key, val[0].Score, val[0].Member); err != nil {
-		return x, errors.Wrap(err, "failed to reinsert element (GetMinElement)")
+		return x, err
 	}
 	return x, nil
 }
