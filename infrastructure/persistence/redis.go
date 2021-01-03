@@ -69,6 +69,17 @@ func (rds *RedisDatastore) GetMinElement(ctx context.Context, key string) (strin
 	return x, nil
 }
 
+// TODO: hMSet メソッドを利用することでより効率的に書けるらしい
+// SetHash: 親Key 子Key Valueにより管理されるデータ型に値を格納する。
+func (rds *RedisDatastore) SetHash(ctx context.Context, pkey string, ckey string, value string) error {
+	return rds.client.HSet(ctx, pkey, ckey, value).Err()
+}
+
+// GetHash: 親Key, 子Key で値を取得する
+func (rds *RedisDatastore) GetHash(ctx context.Context, pkey string, ckey string) (string, error) {
+	return rds.client.HGet(ctx, pkey, ckey).Result()
+}
+
 // PopMin: SortedSetの最小値を削除する。
 func (rds *RedisDatastore) PopMin(ctx context.Context, key string) error {
 	return rds.client.ZPopMin(ctx, key).Err()

@@ -27,4 +27,5 @@ type TwitterClient interface {
 	FetchFavorites() ([]model.Tweet, error)
 	DestroyTweet(tweetID string) error
 	DestroyFavorite(tweetID string) error
+	FetchTweetFromIDStr(tweetID string) (*model.Tweet, error)
 }

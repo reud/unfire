@@ -6,7 +6,10 @@ import (
 	"strconv"
 	"time"
 	"unfire/config"
+	"unfire/domain/service"
+	"unfire/infrastructure/persistence"
 	"unfire/route"
+	"unfire/usecase"
 )
 
 type logWriter struct {
@@ -30,9 +33,21 @@ func init() {
 	log.Println("Unfire Started!")
 }
 
+func startBatchService() {
+	ds, err := persistence.NewRedisDatastore()
+	if err != nil {
+		panic(err)
+	}
+	bth := service.NewBatchService(time.Minute*15, ds)
+	bth.Start()
+}
+
 func main() {
 	cfg := config.GetInstance()
-	e := route.Init()
+	startBatchService()
+	as := service.NewAuthService()
+	au := usecase.NewAuthUseCase()
+	e := route.Init(as, au)
 	if err := e.Start(":" + strconv.Itoa(cfg.Port)); err != nil {
 		panic(err)
 	}

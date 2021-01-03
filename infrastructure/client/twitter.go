@@ -22,6 +22,7 @@ const (
 	destroyTweetURL     = "https://api.twitter.com/1.1/statuses/destroy"
 	getFavoritesURL     = "https://api.twitter.com/1.1/favorites/list.json"
 	destroyFavoritesURL = "https://api.twitter.com/1.1/favorites/destroy.json"
+	statusShowURL       = "https://api.twitter.com/1.1/statuses/show.json"
 )
 
 type twitterClient struct {
@@ -167,6 +168,30 @@ func (tc *twitterClient) DestroyFavorite(tweetID string) error {
 	}
 	log.Printf("%+v", string(body))
 	return nil
+}
+
+func (tc *twitterClient) FetchTweetFromIDStr(tweetID string) (*model.Tweet, error) {
+	u, err := url.Parse(statusShowURL)
+	if err != nil {
+		return nil, err
+	}
+
+	q := u.Query()
+	q.Set("id", tweetID)
+
+	oc := NewTWClient()
+	resp, err := oc.Post(nil, tc.at, u.String(), q)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	var tweet *model.Tweet
+	if err := json.NewDecoder(resp.Body).Decode(tweet); err != nil {
+		return nil, err
+	}
+	return tweet, err
 }
 
 type MyData struct {

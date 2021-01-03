@@ -28,4 +28,6 @@ const (
 	IgnoresSuffix  = "_ignore"
 	TweetPrefix    = "tweet_"
 	TweetsSuffix   = "_tweets"
+	Users          = "users"
+	TokenSuffix    = "token_"
 )

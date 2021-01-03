@@ -210,6 +210,24 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 			}
 		}
 
+		// token周りの情報を保存(at)
+		if err := ds.SetHash(ctx, utils.TokenSuffix+tc.FetchMe().ID, "at", at.Token); err != nil {
+			fmt.Printf("failed to save at.Token: %+v", err)
+			return
+		}
+
+		// token周りの情報を保存(sec)
+		if err := ds.SetHash(ctx, utils.TokenSuffix+tc.FetchMe().ID, "sec", at.Secret); err != nil {
+			fmt.Printf("failed to save at.Sec: %+v", err)
+			return
+		}
+
+		// user一覧情報に保存
+		if err := ds.AppendString(ctx, utils.Users, tc.FetchMe().ID); err != nil {
+			fmt.Printf("failed to set add user: %+v", err)
+			return
+		}
+
 		if err := ds.SetString(ctx, tc.FetchMe().ID+utils.StatusSuffix, utils.Working.String()); err != nil {
 			fmt.Printf("failed to set status timeline: %+v", err)
 			return

@@ -22,4 +22,6 @@ type Datastore interface {
 	PopMin(ctx context.Context, key string) error
 	// SortedSetに任意の値を追加する。
 	Insert(ctx context.Context, key string, score float64, member interface{}) error
+	SetHash(ctx context.Context, pkey string, ckey string, value string) error
+	GetHash(ctx context.Context, pkey string, ckey string) (string, error)
 }
