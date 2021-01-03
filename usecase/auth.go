@@ -113,7 +113,7 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 		return "", err
 	}
 
-	fmt.Printf("%+v", q)
+	fmt.Printf("%+v\n", q)
 
 	reqt, ok := mn.Get("token")
 	if !ok {
