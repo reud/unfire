@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"github.com/garyburd/go-oauth/oauth"
 	"unfire/config"
 )
@@ -32,7 +31,6 @@ func (as *authService) RequestTemporaryCredentialsAuthorizationURL() (*oauth.Cre
 	rt, err := as.oauthClient.RequestTemporaryCredentials(nil, callbackURL, nil)
 	if err != nil {
 		// TODO: ここでひっかかる。調査必要
-		fmt.Printf("failed RequestTemporaryCredentialsAuthorizationURL\n")
 		return nil, "", err
 	}
 	return rt, as.oauthClient.AuthorizationURL(rt, nil), nil

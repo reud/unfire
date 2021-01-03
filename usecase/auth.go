@@ -70,12 +70,10 @@ func (au *authUseCase) Login(ctx RequestContext, mn repository.SessionRepository
 
 	// パラメータのバインド
 	ps := newGetLoginParameter()
-	fmt.Printf("bind1\n")
 	if err := ctx.Bind(&ps); err != nil {
 		return "", err
 	}
 
-	fmt.Printf("bind2\n")
 	// TODO: Bind機能を実装する。以下のコードは{}のerrorが変えるので調査が必要
 	/*
 		if err := ctx.Validate(&ps); err != nil {
@@ -104,7 +102,6 @@ func (au *authUseCase) Login(ctx RequestContext, mn repository.SessionRepository
 
 	mn.Set("token", rt.Token)
 	mn.Set("secret", rt.Secret)
-	fmt.Printf("bind3\n")
 	return u, nil
 }
 

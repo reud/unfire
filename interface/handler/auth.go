@@ -35,7 +35,7 @@ func (ah *authHandler) GetLogin(usecase usecase.AuthUseCase, as service.AuthServ
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to login(usecase error)", err))
 		}
-		return c.Redirect(http.StatusOK, redirect)
+		return c.Redirect(http.StatusMovedPermanently, redirect)
 	}
 }
 
