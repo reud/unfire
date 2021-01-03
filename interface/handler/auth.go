@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"unfire/domain/service"
 	repository2 "unfire/infrastructure/repository"
-	"unfire/model"
 	"unfire/usecase"
 )
 
@@ -29,11 +28,11 @@ func (ah *authHandler) GetLogin(usecase usecase.AuthUseCase, as service.AuthServ
 	return func(c echo.Context) error {
 		sr, err := repository2.NewSessionRepository("request", &c)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to login(session error)", err))
+			return c.JSON(http.StatusBadRequest, err)
 		}
 		redirect, err := usecase.Login(c, sr, as)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to login(usecase error)", err))
+			return c.JSON(http.StatusBadRequest, err)
 		}
 		return c.Redirect(http.StatusMovedPermanently, redirect)
 	}
@@ -43,11 +42,11 @@ func (ah *authHandler) GetCallback(usecase usecase.AuthUseCase, as service.AuthS
 	return func(c echo.Context) error {
 		sr, err := repository2.NewSessionRepository("request", &c)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to login", err))
+			return c.JSON(http.StatusBadRequest, err)
 		}
 		redirect, err := usecase.Callback(c, sr, as)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to callback", err))
+			return c.JSON(http.StatusBadRequest, err)
 		}
 		return c.Redirect(http.StatusMovedPermanently, redirect)
 	}
