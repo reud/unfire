@@ -53,7 +53,7 @@ func (ah *authHandler) GetCallback(usecase usecase.AuthUseCase, as service.AuthS
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to login", err))
 		}
-		redirect, err := usecase.Login(c, sr, as)
+		redirect, err := usecase.Callback(c, sr, as)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, model.NewResponse(http.StatusBadRequest, "failed to callback", err))
 		}
