@@ -14,14 +14,6 @@ type TwitterCallBackQuery struct {
 	OAuthVerifier string `query:"oauth_verifier"`
 }
 
-const (
-	callbackURL        = "https://unfire.reud.app/api/v1/auth/callback"
-	minimumDeleteCount = 1
-	maximumDeleteCount = 1000
-	minimumBorderCount = 15
-	maximumBorderCount = 10000000
-)
-
 type AuthHandler interface {
 	GetLogin(usecase usecase.AuthUseCase, au service.AuthService) echo.HandlerFunc
 	GetCallback(usecase usecase.AuthUseCase, as service.AuthService) echo.HandlerFunc
