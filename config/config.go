@@ -7,7 +7,7 @@ import (
 )
 
 type Config struct {
-	Port                  int    `envconfig:"APP_PORT" default:"8080"`
+	Port                  int    `envconfig:"APP_PORT" default:"5000"`
 	TwitterConsumerKey    string `envconfig:"TWITTER_CONSUMER_KEY"`
 	TwitterConsumerSecret string `envconfig:"TWITTER_CONSUMER_SECRET"`
 }
