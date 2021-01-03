@@ -15,7 +15,7 @@ const (
 	destroyTweetURL     = "https://api.twitter.com/1.1/statuses/destroy"
 	getFavoritesURL     = "https://api.twitter.com/1.1/favorites/list.json"
 	destroyFavoritesURL = "https://api.twitter.com/1.1/favorites/destroy.json"
-	callbackURL         = "https://unfire.reud.net/auth/callback" // TODO: configで切り替え
+	callbackURL         = "https://unfire.reud.app/auth/callback" // TODO: configで切り替え
 )
 
 type AuthService interface {
