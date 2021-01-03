@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/json"
 	"github.com/garyburd/go-oauth/oauth"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -45,25 +44,21 @@ func fetchProfile(at *oauth.Credentials) (*model.WorkerData, error) {
 	oc := NewTWClient()
 	resp, err := oc.Get(nil, at, accountURL, nil)
 	if err != nil {
-		err = errors.Wrap(err, "Failed to send twitter request.")
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 500 {
-		err = errors.New("Twitter is unavailable")
 		return nil, err
 	}
 
 	if resp.StatusCode >= 400 {
-		err = errors.New("Twitter request is invalid")
 		return nil, err
 	}
 
 	data := &model.WorkerData{}
 	err = json.NewDecoder(resp.Body).Decode(data)
 	if err != nil {
-		err = errors.Wrap(err, "Failed to decode user account response.")
 		return nil, err
 	}
 

@@ -44,6 +44,7 @@ func startBatchService() {
 
 func main() {
 	cfg := config.GetInstance()
+	fmt.Printf("%+v", *cfg)
 	startBatchService()
 	as := service.NewAuthService()
 	au := usecase.NewAuthUseCase()

@@ -1,8 +1,8 @@
 package service
 
 import (
+	"fmt"
 	"github.com/garyburd/go-oauth/oauth"
-	"github.com/pkg/errors"
 	"unfire/config"
 )
 
@@ -15,7 +15,7 @@ const (
 	destroyTweetURL     = "https://api.twitter.com/1.1/statuses/destroy"
 	getFavoritesURL     = "https://api.twitter.com/1.1/favorites/list.json"
 	destroyFavoritesURL = "https://api.twitter.com/1.1/favorites/destroy.json"
-	callbackURL         = "https://unfire.reud.app/api/v1/auth/callback"
+	callbackURL         = "http://unfire.reud.net/auth/callback" // TODO: configで切り替え
 )
 
 type AuthService interface {
@@ -31,6 +31,8 @@ type authService struct {
 func (as *authService) RequestTemporaryCredentialsAuthorizationURL() (*oauth.Credentials, string, error) {
 	rt, err := as.oauthClient.RequestTemporaryCredentials(nil, callbackURL, nil)
 	if err != nil {
+		// TODO: ここでひっかかる。調査必要
+		fmt.Printf("failed RequestTemporaryCredentialsAuthorizationURL\n")
 		return nil, "", err
 	}
 	return rt, as.oauthClient.AuthorizationURL(rt, nil), nil
@@ -40,7 +42,7 @@ func (as *authService) RequestTemporaryCredentialsAuthorizationURL() (*oauth.Cre
 func (as *authService) GetAccessToken(rt *oauth.Credentials, oauthVerifier string) (*oauth.Credentials, error) {
 	at, _, err := as.oauthClient.RequestToken(nil, rt, oauthVerifier)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get access totken")
+		return nil, err
 	}
 	return at, nil
 }

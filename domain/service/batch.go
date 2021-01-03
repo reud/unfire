@@ -72,14 +72,14 @@ func task(ds persistence.Datastore) error {
 
 			tweetTime, err := strconv.ParseInt(sp[0], 10, 64)
 			if err != nil {
-				ctx = context.WithValue(ctx, "error", errors.Wrap(err, "tweetTime parse failed"))
+				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
 			}
 
 			userID := sp[1]
 			if err != nil {
-				ctx = context.WithValue(ctx, "error", errors.Wrap(err, "userID parse failed"))
+				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
 			}
@@ -87,7 +87,7 @@ func task(ds persistence.Datastore) error {
 			// 取得したuserIDのaccess tokenを取り出す。
 			atStr, err := ds.GetHash(ctx, utils.TokenSuffix+userID, "at")
 			if err != nil {
-				ctx = context.WithValue(ctx, "error", errors.Wrap(err, "failed to fetch at from datastore"))
+				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
 			}
@@ -95,7 +95,7 @@ func task(ds persistence.Datastore) error {
 			// 取得したuserIDのsecret tokenを取り出す
 			secStr, err := ds.GetHash(ctx, utils.TokenSuffix+userID, "sec")
 			if err != nil {
-				ctx = context.WithValue(ctx, "error", errors.Wrap(err, "failed to fetch sec from datastore"))
+				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
 			}
@@ -108,7 +108,7 @@ func task(ds persistence.Datastore) error {
 
 			tc, err := client.NewTwitterClient(cred)
 			if err != nil {
-				ctx = context.WithValue(ctx, "error", errors.Wrap(err, "failed to create twitter client"))
+				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
 			}
@@ -123,7 +123,7 @@ func task(ds persistence.Datastore) error {
 
 			// 24時間以上経過しているならばその最小値を消す。
 			if err := ds.PopMin(ctx, utils.TimeLine); err != nil {
-				ctx = context.WithValue(ctx, "error", errors.Wrap(err, "delete PopMin failed"))
+				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
 			}
@@ -132,21 +132,21 @@ func task(ds persistence.Datastore) error {
 			for {
 				lastTweetID, err := ds.LastPop(ctx, userID+utils.TweetsSuffix)
 				if err != nil {
-					ctx = context.WithValue(ctx, "error", errors.Wrap(err, "fetch last tweet failed"))
+					ctx = context.WithValue(ctx, "error", err)
 					cancel()
 					continue
 				}
 
 				tweet, err := tc.FetchTweetFromIDStr(lastTweetID)
 				if err != nil {
-					ctx = context.WithValue(ctx, "error", errors.Wrap(err, "failed to fetch last tweet from twitter by IDStr"))
+					ctx = context.WithValue(ctx, "error", err)
 					cancel()
 					continue
 				}
 
 				ct, err := strconv.ParseInt(tweet.CreatedAt, 10, 64)
 				if err != nil {
-					ctx = context.WithValue(ctx, "error", errors.Wrap(err, "tweet CreatedAt Parse Failed"))
+					ctx = context.WithValue(ctx, "error", err)
 					cancel()
 					continue
 				}
@@ -160,7 +160,7 @@ func task(ds persistence.Datastore) error {
 
 				// ツイートの削除
 				if err := tc.DestroyTweet(tweet.IDStr); err != nil {
-					ctx = context.WithValue(ctx, "error", errors.Wrap(err, "tweet Delete failed"))
+					ctx = context.WithValue(ctx, "error", err)
 					cancel()
 					continue
 				}

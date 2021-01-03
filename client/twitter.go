@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/json"
 	"github.com/garyburd/go-oauth/oauth"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -49,7 +48,6 @@ func GetAccessToken(rt *oauth.Credentials, oauthVerifier string) (int, *oauth.Cr
 	oc := NewTWClient()
 	at, _, err := oc.RequestToken(nil, rt, oauthVerifier)
 	if err != nil {
-		err := errors.Wrap(err, "Failed to get access token.")
 		return http.StatusBadRequest, nil, err
 	}
 	return http.StatusOK, at, nil
@@ -71,25 +69,21 @@ func GetMe(at *oauth.Credentials) (*MyData, error) {
 	oc := NewTWClient()
 	resp, err := oc.Get(nil, at, accountURL, nil)
 	if err != nil {
-		err = errors.Wrap(err, "Failed to send twitter request.")
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 500 {
-		err = errors.New("Twitter is unavailable")
 		return nil, err
 	}
 
 	if resp.StatusCode >= 400 {
-		err = errors.New("Twitter request is invalid")
 		return nil, err
 	}
 
 	data := &MyData{}
 	err = json.NewDecoder(resp.Body).Decode(data)
 	if err != nil {
-		err = errors.Wrap(err, "Failed to decode user account response.")
 		return nil, err
 	}
 

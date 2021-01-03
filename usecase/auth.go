@@ -70,13 +70,18 @@ func (au *authUseCase) Login(ctx RequestContext, mn repository.SessionRepository
 
 	// パラメータのバインド
 	ps := newGetLoginParameter()
+	fmt.Printf("bind1\n")
 	if err := ctx.Bind(&ps); err != nil {
 		return "", err
 	}
 
-	if err := ctx.Validate(&ps); err != nil {
-		return "", err
-	}
+	fmt.Printf("bind2\n")
+	// TODO: Bind機能を実装する。以下のコードは{}のerrorが変えるので調査が必要
+	/*
+		if err := ctx.Validate(&ps); err != nil {
+			return "", err
+		}
+	*/
 
 	if ps.DeleteLike {
 		mn.Set("delete_like_count", strconv.Itoa(ps.DeleteLikeCount))
@@ -99,7 +104,7 @@ func (au *authUseCase) Login(ctx RequestContext, mn repository.SessionRepository
 
 	mn.Set("token", rt.Token)
 	mn.Set("secret", rt.Secret)
-
+	fmt.Printf("bind3\n")
 	return u, nil
 }
 
@@ -125,6 +130,7 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 		return "", errors.New("error in getting session value (request_token_secret)")
 	}
 
+	fmt.Printf("reqt: %+v reqts: %+v\n", reqt, reqts)
 	at, err := as.GetAccessToken(&oauth.Credentials{
 		Token:  reqt.(string),
 		Secret: reqts.(string),
@@ -143,16 +149,16 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 
 	err = mn.Clear(ctx.Request(), &ctx.Response().Writer)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to clear session")
+		return "", err
 	}
 
 	ds, err := persistence.NewRedisDatastore()
 	if err != nil {
-		return "", errors.Wrap(err, "redis init failed")
+		return "", err
 	}
 
 	if err := ds.SetString(ctx.Request().Context(), tc.FetchMe().ID+utils.StatusSuffix, utils.Initializing.String()); err != nil {
-		return "", errors.Wrap(err, "redis set status failed")
+		return "", err
 	}
 
 	// ツイートの全ロードを行い、各種datastoreに格納を行う

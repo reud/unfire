@@ -46,15 +46,17 @@ URLパラメータを付加してオプションの設定が可能になりま�
 
 - running with docker
 
-`<project-root>/scripts/manager.sh run docker`
+`./scripts/manager.sh run docker`
 
 - health
 
 http://unfire.reud.app/health
 
+# url
+
+http://localhost:8080/
+
 # 参考
-
-
 
 - [Goで書いたサーバーをHerokuにDocker Deployする - Qiita](https://qiita.com/croquette0212/items/2b85aa2c6b2933244f07)
 - [Heroku Dockerの使い所](https://www.slideshare.net/kon_yu/heroku-docker)
