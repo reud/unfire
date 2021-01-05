@@ -184,6 +184,8 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 
 		for len(latestTweets) != 0 {
 			fmt.Printf("tweet leading...\n")
+			fmt.Printf("[Tweet Info] last tweet: %+v", latestTweets[len(latestTweets)-1].Text)
+			fmt.Printf("[Tweet Info] id: %+v", latestTweets[len(latestTweets)-1].ID)
 			lastID := latestTweets[len(latestTweets)-1].IDStr
 			// TODO: API Limit回避の方法について考える。
 			time.Sleep(time.Second * 30)
