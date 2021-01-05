@@ -77,6 +77,9 @@ func (tc *twitterClient) FetchTweets(options ...client.FetchTweetOptionFunc) ([]
 	}
 
 	q := u.Query()
+	for _, f := range options {
+		f(&q)
+	}
 	q.Set("user_id", tc.UserData.ID)
 	q.Set("count", "150")
 	oc := NewTWClient()
