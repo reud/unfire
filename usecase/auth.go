@@ -139,10 +139,12 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 		Secret: reqts.(string),
 	}, q.OAuthVerifier)
 
+	fmt.Printf("got accesstoken\n")
 	if err != nil {
 		return "", err
 	}
 
+	fmt.Printf("got new client\n")
 	tc, err := client.NewTwitterClient(at)
 	if err != nil {
 		return "", err
@@ -154,6 +156,7 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 	if err != nil {
 		return "", err
 	}
+	fmt.Printf("session cleared\n")
 
 	ds, err := persistence.NewRedisDatastore()
 	if err != nil {
@@ -164,6 +167,7 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 		return "", err
 	}
 
+	fmt.Printf("goroutine start \n")
 	// ツイートの全ロードを行い、各種datastoreに格納を行う
 	go func(ctx context.Context) {
 		latestTweets, err := tc.FetchTweets()
@@ -179,6 +183,7 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 		}
 
 		for len(latestTweets) != 0 {
+			fmt.Printf("tweet leading...\n")
 			lastID := latestTweets[len(latestTweets)-1].IDStr
 			// TODO: API Limit回避の方法について考える。
 			time.Sleep(time.Second * 30)
@@ -243,7 +248,7 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 		}
 
 	}(ctx.Request().Context())
-
+	fmt.Printf("callback request finished\n")
 	return op.CallbackUrl, nil
 }
 
