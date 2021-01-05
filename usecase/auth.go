@@ -102,6 +102,10 @@ func (au *authUseCase) Login(ctx RequestContext, mn repository.SessionRepository
 
 	mn.Set("token", rt.Token)
 	mn.Set("secret", rt.Secret)
+
+	if err := mn.Save(ctx.Request(), &ctx.Response().Writer); err != nil {
+		return "", errors.New("failed to save session")
+	}
 	return u, nil
 }
 
