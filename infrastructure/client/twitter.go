@@ -69,7 +69,7 @@ func (tc *twitterClient) FetchMe() *model.WorkerData {
 	return tc.UserData
 }
 
-// TODO: since_idにバグあり。 https://memo.furyutei.work/entry/20100124/1264342029
+// TODO: since_idにバグあり。 https://memo.furyutei.work/entry/20100124/1264342029 pagingで対応する。
 func (tc *twitterClient) FetchTweets(options ...client.FetchTweetOptionFunc) ([]model.Tweet, error) {
 	var tweets []model.Tweet
 	u, err := url.Parse(searchTweetURL)
