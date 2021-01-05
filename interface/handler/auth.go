@@ -48,11 +48,12 @@ func (ah *authHandler) GetCallback(usecase usecase.AuthUseCase, as service.AuthS
 			fmt.Printf("err!: %+v", err)
 			return c.JSON(http.StatusBadRequest, err)
 		}
-		redirect, err := usecase.Callback(c, sr, as)
+		_, err = usecase.Callback(c, sr, as)
 		if err != nil {
 			fmt.Printf("err!: %+v", err)
 			return c.JSON(http.StatusBadRequest, err)
 		}
-		return c.Redirect(http.StatusMovedPermanently, redirect)
+		fmt.Printf("callback finished\n")
+		return c.Redirect(http.StatusMovedPermanently, "https://portal.reud.net/")
 	}
 }
