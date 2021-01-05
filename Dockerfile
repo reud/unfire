@@ -15,6 +15,6 @@ RUN  apt-get update && apt-get install -y redis-server
 RUN /usr/bin/redis-server --daemonize yes
 COPY --from=builder /go/src/github.com/reud/unfire /app
 ADD start.sh /
-RUN chmod 744 /startup.sh
+RUN chmod 744 /start.sh
 
 CMD /start.sh
