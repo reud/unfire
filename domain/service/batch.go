@@ -3,14 +3,16 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/garyburd/go-oauth/oauth"
-	"github.com/pkg/errors"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 	"unfire/infrastructure/client"
 	"unfire/infrastructure/persistence"
 	"unfire/utils"
+
+	"github.com/garyburd/go-oauth/oauth"
+	"github.com/pkg/errors"
 )
 
 type BatchService interface {
@@ -33,10 +35,11 @@ func (bs *batchService) Start() {
 	ticker := time.NewTicker(bs.interval)
 	go func() {
 		for t := range ticker.C {
-			fmt.Printf("batch started: %+v", t)
+			fmt.Printf("batch started: %+v\n", t)
 			if err := task(bs.ds); err != nil {
-				fmt.Printf("batch error occured: %+v", err)
+				fmt.Printf("batch error occured: %+v\n", err)
 			}
+			fmt.Printf("batch finished: %+v\n", t)
 		}
 	}()
 }
@@ -55,9 +58,11 @@ func task(ds persistence.Datastore) error {
 			}
 			return nil
 		default:
+			log.Printf("picking oldest tweets")
 			// 最小値を持ってくる
 			data, err := ds.GetMinElement(ctx, utils.TimeLine)
 			if err != nil {
+				log.Printf("%+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -65,13 +70,16 @@ func task(ds persistence.Datastore) error {
 
 			sp := strings.Split(data, "_")
 			if len(data) != 2 {
-				ctx = context.WithValue(ctx, "error", errors.New(fmt.Sprintf("bad data got: %+v", sp)))
+				err := errors.New(fmt.Sprintf("bad data got: %+v", sp))
+				log.Printf("%+v\n", err)
+				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
 			}
 
 			tweetTime, err := strconv.ParseInt(sp[0], 10, 64)
 			if err != nil {
+				log.Printf("%+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -79,6 +87,7 @@ func task(ds persistence.Datastore) error {
 
 			userID := sp[1]
 			if err != nil {
+				log.Printf("%+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -87,6 +96,7 @@ func task(ds persistence.Datastore) error {
 			// 取得したuserIDのaccess tokenを取り出す。
 			atStr, err := ds.GetHash(ctx, utils.TokenSuffix+userID, "at")
 			if err != nil {
+				log.Printf("%+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -95,6 +105,7 @@ func task(ds persistence.Datastore) error {
 			// 取得したuserIDのsecret tokenを取り出す
 			secStr, err := ds.GetHash(ctx, utils.TokenSuffix+userID, "sec")
 			if err != nil {
+				log.Printf("%+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -108,6 +119,7 @@ func task(ds persistence.Datastore) error {
 
 			tc, err := client.NewTwitterClient(cred)
 			if err != nil {
+				log.Printf("%+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -117,12 +129,14 @@ func task(ds persistence.Datastore) error {
 			t := time.Unix(tweetTime, 0)
 			// 経過していない場合は終了
 			if !time.Now().After(t.AddDate(0, 0, 1)) {
+				log.Printf("its new tweet \n")
 				cancel()
 				continue
 			}
 
 			// 24時間以上経過しているならばその最小値を消す。
 			if err := ds.PopMin(ctx, utils.TimeLine); err != nil {
+				log.Printf("%+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -132,6 +146,7 @@ func task(ds persistence.Datastore) error {
 			for {
 				lastTweetID, err := ds.LastPop(ctx, userID+utils.TweetsSuffix)
 				if err != nil {
+					log.Printf("%+v\n", err)
 					ctx = context.WithValue(ctx, "error", err)
 					cancel()
 					continue
@@ -139,6 +154,7 @@ func task(ds persistence.Datastore) error {
 
 				tweet, err := tc.FetchTweetFromIDStr(lastTweetID)
 				if err != nil {
+					log.Printf("%+v\n", err)
 					ctx = context.WithValue(ctx, "error", err)
 					cancel()
 					continue
@@ -146,6 +162,7 @@ func task(ds persistence.Datastore) error {
 
 				ct, err := strconv.ParseInt(tweet.CreatedAt, 10, 64)
 				if err != nil {
+					log.Printf("%+v\n", err)
 					ctx = context.WithValue(ctx, "error", err)
 					cancel()
 					continue
@@ -158,8 +175,10 @@ func task(ds persistence.Datastore) error {
 					break
 				}
 
+				log.Printf("deleting... %+v: %+v\n", tweet.ID, tweet.Text)
 				// ツイートの削除
 				if err := tc.DestroyTweet(tweet.ID); err != nil {
+					log.Printf("%+v\n", err)
 					ctx = context.WithValue(ctx, "error", err)
 					cancel()
 					continue

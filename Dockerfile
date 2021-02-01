@@ -10,8 +10,9 @@ COPY . .
 RUN go build main.go
 
 # runtime image
-FROM ubuntu:14.04
+FROM ubuntu:20.04
 RUN  apt-get update && apt-get install -y redis-server
+RUN apt-get install -y ca-certificates
 RUN /usr/bin/redis-server --daemonize yes
 COPY --from=builder /go/src/github.com/reud/unfire /app
 ADD start.sh /

@@ -24,11 +24,15 @@ const (
 	destroyTweetURL     = "https://api.twitter.com/1.1/statuses/destroy"
 	getFavoritesURL     = "https://api.twitter.com/1.1/favorites/list.json"
 	destroyFavoritesURL = "https://api.twitter.com/1.1/favorites/destroy.json"
-	statusShowURL       = "https://api.twitter.com/1.1/statuses/show.json"
+	_getTweetsIDURL     = "https://api.twitter.com/2/tweets/:id" // V2 Beta URL https://developer.twitter.com/en/docs/twitter-api/tweets/lookup/api-reference/get-tweets-id
 )
 
 func generateSearchTweetURL(id string) string {
 	return strings.ReplaceAll(_searchTweetURL, ":id", id)
+}
+
+func generateGetTweetsIDURL(id string) string {
+	return strings.ReplaceAll(_getTweetsIDURL, ":id", id)
 }
 
 type twitterClient struct {
@@ -270,19 +274,20 @@ func (tc *twitterClient) DestroyFavorite(tweetID string) error {
 }
 
 func (tc *twitterClient) FetchTweetFromIDStr(tweetID string) (*model.Tweet, error) {
-	u, err := url.Parse(statusShowURL)
+	u, err := url.Parse(generateGetTweetsIDURL(tweetID))
 	if err != nil {
 		return nil, err
 	}
 
 	q := u.Query()
-	q.Set("id", tweetID)
+	q.Set("tweet.fields", "id,text,public_metrics,created_at")
 
 	oc := NewTWClient()
 	resp, err := oc.Post(nil, tc.at, u.String(), q)
 	if err != nil {
 		return nil, err
 	}
+	utils.DebugResponse(resp.Body)
 
 	defer resp.Body.Close()
 

@@ -38,7 +38,7 @@ func startBatchService() {
 	if err != nil {
 		panic(err)
 	}
-	bth := service.NewBatchService(time.Minute*15, ds)
+	bth := service.NewBatchService(time.Minute*7, ds)
 	bth.Start()
 }
 
