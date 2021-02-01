@@ -1,20 +1,19 @@
 package client
 
 import (
-	"net/url"
 	"unfire/domain/model"
 )
 
 type FetchTweetOption struct {
-	SinceId *string // ページングに利用する。ツイートのIDを指定すると、これを含まず、これより未来のツイートを取得できる。
+	GetAll bool // すべてのツイートを取得する。
 }
 
 // Functional Options. ref: https://qiita.com/yoshinori_hisakawa/items/f0c326c99fec116070d4
-type FetchTweetOptionFunc func(q *url.Values)
+type FetchTweetOptionFunc func(option *FetchTweetOption)
 
-func SinceId(sinceId string) FetchTweetOptionFunc {
-	return func(q *url.Values) {
-		q.Set("since_id", sinceId)
+func GetAll() FetchTweetOptionFunc {
+	return func(option *FetchTweetOption) {
+		option.GetAll = true
 	}
 }
 

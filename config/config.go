@@ -1,18 +1,20 @@
 package config
 
 import (
+	"unfire/utils"
+
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
-	"unfire/utils"
 )
 
 type Config struct {
 	Port                  int    `envconfig:"APP_PORT" default:"5000"`
 	TwitterConsumerKey    string `envconfig:"TWITTER_CONSUMER_KEY"`
 	TwitterConsumerSecret string `envconfig:"TWITTER_CONSUMER_SECRET"`
+	Domain                string `envconfig:"DOMAIN" default:"unfire.reud.app"`
 }
 
-var sharedConfig *Config = readConfig()
+var sharedConfig = readConfig()
 
 func readConfig() *Config {
 	// .envが存在するか、存在するなら読み込み

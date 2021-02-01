@@ -159,7 +159,7 @@ func task(ds persistence.Datastore) error {
 				}
 
 				// ツイートの削除
-				if err := tc.DestroyTweet(tweet.IDStr); err != nil {
+				if err := tc.DestroyTweet(tweet.ID); err != nil {
 					ctx = context.WithValue(ctx, "error", err)
 					cancel()
 					continue

@@ -1,8 +1,11 @@
 package service
 
 import (
-	"github.com/garyburd/go-oauth/oauth"
+	"fmt"
+	"strings"
 	"unfire/config"
+
+	"github.com/garyburd/go-oauth/oauth"
 )
 
 const (
@@ -14,8 +17,18 @@ const (
 	destroyTweetURL     = "https://api.twitter.com/1.1/statuses/destroy"
 	getFavoritesURL     = "https://api.twitter.com/1.1/favorites/list.json"
 	destroyFavoritesURL = "https://api.twitter.com/1.1/favorites/destroy.json"
-	callbackURL         = "https://unfire.reud.app/auth/callback" // TODO: configで切り替え
 )
+
+var callbackURL string
+
+func init() {
+	cfg := config.GetInstance()
+	if strings.Contains(cfg.Domain, "localhost") {
+		callbackURL = fmt.Sprintf("http://%+v/auth/callback", cfg.Domain)
+	} else {
+		callbackURL = fmt.Sprintf("https://%+v/auth/callback", cfg.Domain)
+	}
+}
 
 type AuthService interface {
 	RequestTemporaryCredentialsAuthorizationURL() (*oauth.Credentials, string, error)

@@ -3,18 +3,18 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"github.com/garyburd/go-oauth/oauth"
-	"github.com/pkg/errors"
 	"reflect"
 	"strconv"
 	"time"
 	client2 "unfire/domain/client"
-	"unfire/domain/model"
 	"unfire/domain/repository"
 	"unfire/domain/service"
 	"unfire/infrastructure/client"
 	"unfire/infrastructure/persistence"
 	"unfire/utils"
+
+	"github.com/garyburd/go-oauth/oauth"
+	"github.com/pkg/errors"
 )
 
 type AuthUseCase interface {
@@ -170,37 +170,16 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 	fmt.Printf("goroutine start \n")
 	// ツイートの全ロードを行い、各種datastoreに格納を行う
 	go func(ctx context.Context) {
-		latestTweets, err := tc.FetchTweets()
-		// loggerを使う
+
+		tweets, err := tc.FetchTweets(client2.GetAll())
+
 		if err != nil {
-			fmt.Printf("err in goroutine (tweet fetching): %+v", err)
+			fmt.Printf("tweet fetch error.  failed: %+v", err)
 			return
 		}
 
-		var tweets []model.Tweet
-		for _, v := range latestTweets {
-			tweets = append(tweets, v)
-		}
-
-		for len(latestTweets) != 0 {
-			fmt.Printf("tweet leading...\n")
-			fmt.Printf("[Tweet Info] last tweet: %+v", latestTweets[len(latestTweets)-1].Text)
-			fmt.Printf("[Tweet Info] id: %+v", latestTweets[len(latestTweets)-1].ID)
-			lastID := latestTweets[len(latestTweets)-1].IDStr
-			// TODO: API Limit回避の方法について考える。
-			time.Sleep(time.Second * 30)
-			latestTweets, err = tc.FetchTweets(client2.SinceId(lastID))
-			if err != nil {
-				fmt.Printf("err in goroutine (tweet fetching): %+v", err)
-				return
-			}
-			for _, v := range latestTweets {
-				tweets = append(tweets, v)
-			}
-		}
-
 		for _, v := range tweets {
-			if err := ds.AppendString(ctx, tc.FetchMe().ID+utils.TweetsSuffix, v.IDStr); err != nil {
+			if err := ds.AppendString(ctx, tc.FetchMe().ID+utils.TweetsSuffix, v.ID); err != nil {
 				fmt.Printf("redis error. tweet append failed: %+v", err)
 				return
 			}
@@ -213,14 +192,15 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 		}
 		// ツイートが入っていれば、一番古い時間を格納する。(多分一番最後)
 		if lnth != 0 {
-
-			idi64, err := strconv.ParseInt(tweets[len(tweets)-1].CreatedAt, 10, 64)
+			oldestCreatedAt, err := time.Parse("2006-01-02T15:04:05.000Z", tweets[len(tweets)-1].CreatedAt)
 			if err != nil {
-				fmt.Printf("tweet idstr parse failed: %+v  original: %+v", err, tweets[len(tweets)-1].CreatedAt)
+				fmt.Printf("time parse failed(originalCreatedAT -> time.Date) from: %+v", tweets[len(tweets)-1].CreatedAt)
 				return
 			}
 
-			if err := ds.Insert(ctx, utils.TimeLine, float64(idi64-utils.TimeLinePrefix), tweets[len(tweets)-1].CreatedAt+"_"+tweets[len(tweets)-1].IDStr); err != nil {
+			idi64 := oldestCreatedAt.Unix()
+
+			if err := ds.Insert(ctx, utils.TimeLine, float64(idi64-utils.TimeLinePrefix), strconv.FormatInt(oldestCreatedAt.Unix(), 10)+"_"+tweets[len(tweets)-1].ID); err != nil {
 				fmt.Printf("failed to insert timeline: %+v", err)
 				return
 			}
@@ -248,8 +228,9 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 			fmt.Printf("failed to set status timeline: %+v", err)
 			return
 		}
+		fmt.Printf("goroutine finished\n")
+	}(context.Background())
 
-	}(ctx.Request().Context())
 	fmt.Printf("callback request finished\n")
 	return op.CallbackUrl, nil
 }
