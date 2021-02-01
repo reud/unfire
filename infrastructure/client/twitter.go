@@ -92,9 +92,9 @@ func (tc *twitterClient) FetchTweets(options ...client.FetchTweetOptionFunc) ([]
 	log.Printf("start fetch tweets \n")
 
 	// パラメータの取得
-	option := &client.FetchTweetOption{}
+	option := fetchTweetDefaultOption()
 	for _, f := range options {
-		f(option)
+		f(&option)
 	}
 
 	// 全件取得フラグがtrueなら全件取得メソッドを別で呼び出して終了する。
@@ -283,19 +283,22 @@ func (tc *twitterClient) FetchTweetFromIDStr(tweetID string) (*model.Tweet, erro
 	q.Set("tweet.fields", "id,text,public_metrics,created_at")
 
 	oc := NewTWClient()
-	resp, err := oc.Post(nil, tc.at, u.String(), q)
+	resp, err := oc.Get(nil, tc.at, u.String(), q)
 	if err != nil {
 		return nil, err
 	}
-	utils.DebugResponse(resp.Body)
 
 	defer resp.Body.Close()
 
-	var tweet *model.Tweet
-	if err := json.NewDecoder(resp.Body).Decode(tweet); err != nil {
+	responseBody := struct {
+		Data model.Tweet `json:"data"`
+	}{}
+	// utils.DebugResponse(resp.Body)
+	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
 		return nil, err
 	}
-	return tweet, err
+
+	return &responseBody.Data, err
 }
 
 type MyData struct {

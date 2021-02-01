@@ -190,6 +190,7 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 			fmt.Printf("redis error. tweet read(ListLen): %+v", err)
 			return
 		}
+
 		// ツイートが入っていれば、一番古い時間を格納する。(多分一番最後)
 		if lnth != 0 {
 			oldestCreatedAt, err := time.Parse("2006-01-02T15:04:05.000Z", tweets[len(tweets)-1].CreatedAt)
@@ -200,7 +201,8 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 
 			idi64 := oldestCreatedAt.Unix()
 
-			if err := ds.Insert(ctx, utils.TimeLine, float64(idi64-utils.TimeLinePrefix), strconv.FormatInt(oldestCreatedAt.Unix(), 10)+"_"+tweets[len(tweets)-1].ID); err != nil {
+			// 一番古いツイートの作成時間(unixtime)とそのツイートの保持者を格納する。
+			if err := ds.Insert(ctx, utils.TimeLine, float64(idi64-utils.TimeLinePrefix), strconv.FormatInt(oldestCreatedAt.Unix(), 10)+"_"+tc.FetchMe().ID); err != nil {
 				fmt.Printf("failed to insert timeline: %+v", err)
 				return
 			}

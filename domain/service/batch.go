@@ -59,19 +59,19 @@ func task(ds persistence.Datastore) error {
 			return nil
 		default:
 			log.Printf("picking oldest tweets")
-			// 最小値を持ってくる
+			// 保存されているツイートの中で最も古いものを取得する。
 			data, err := ds.GetMinElement(ctx, utils.TimeLine)
 			if err != nil {
-				log.Printf("%+v\n", err)
+				log.Printf("GetMinElement Error: %+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
 			}
 
 			sp := strings.Split(data, "_")
-			if len(data) != 2 {
+			if len(sp) != 2 {
 				err := errors.New(fmt.Sprintf("bad data got: %+v", sp))
-				log.Printf("%+v\n", err)
+				log.Printf("strings.Split Error: %+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -86,17 +86,11 @@ func task(ds persistence.Datastore) error {
 			}
 
 			userID := sp[1]
-			if err != nil {
-				log.Printf("%+v\n", err)
-				ctx = context.WithValue(ctx, "error", err)
-				cancel()
-				continue
-			}
 
 			// 取得したuserIDのaccess tokenを取り出す。
 			atStr, err := ds.GetHash(ctx, utils.TokenSuffix+userID, "at")
 			if err != nil {
-				log.Printf("%+v\n", err)
+				log.Printf("pick at error: : %+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -105,7 +99,7 @@ func task(ds persistence.Datastore) error {
 			// 取得したuserIDのsecret tokenを取り出す
 			secStr, err := ds.GetHash(ctx, utils.TokenSuffix+userID, "sec")
 			if err != nil {
-				log.Printf("%+v\n", err)
+				log.Printf("pick secret token error:  %+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)
 				cancel()
 				continue
@@ -117,6 +111,7 @@ func task(ds persistence.Datastore) error {
 				Secret: secStr,
 			}
 
+			log.Printf("created token:%+v secret:%+v\n", cred.Token, cred.Secret)
 			tc, err := client.NewTwitterClient(cred)
 			if err != nil {
 				log.Printf("%+v\n", err)
@@ -144,44 +139,50 @@ func task(ds persistence.Datastore) error {
 
 			// そのuserIDのtweetを後ろから取る。
 			for {
-				lastTweetID, err := ds.LastPop(ctx, userID+utils.TweetsSuffix)
-				if err != nil {
-					log.Printf("%+v\n", err)
-					ctx = context.WithValue(ctx, "error", err)
-					cancel()
-					continue
-				}
-
-				tweet, err := tc.FetchTweetFromIDStr(lastTweetID)
-				if err != nil {
-					log.Printf("%+v\n", err)
-					ctx = context.WithValue(ctx, "error", err)
-					cancel()
-					continue
-				}
-
-				ct, err := strconv.ParseInt(tweet.CreatedAt, 10, 64)
-				if err != nil {
-					log.Printf("%+v\n", err)
-					ctx = context.WithValue(ctx, "error", err)
-					cancel()
-					continue
-				}
-
-				// そのツイートの投稿時間が24時間以上経過しているかどうか
-				t := time.Unix(ct, 0)
-				// 1日経っていないならbreak
-				if !time.Now().After(t.AddDate(0, 0, 1)) {
+				select {
+				case <-ctx.Done():
 					break
-				}
+				default:
+					lastTweetID, err := ds.LastPop(ctx, userID+utils.TweetsSuffix)
+					if err != nil {
+						log.Printf("%+v\n", err)
+						ctx = context.WithValue(ctx, "error", err)
+						cancel()
+						continue
+					}
 
-				log.Printf("deleting... %+v: %+v\n", tweet.ID, tweet.Text)
-				// ツイートの削除
-				if err := tc.DestroyTweet(tweet.ID); err != nil {
-					log.Printf("%+v\n", err)
-					ctx = context.WithValue(ctx, "error", err)
-					cancel()
-					continue
+					tweet, err := tc.FetchTweetFromIDStr(lastTweetID)
+					if err != nil {
+						log.Printf("%+v\n", err)
+						ctx = context.WithValue(ctx, "error", err)
+						cancel()
+						continue
+					}
+					log.Printf("tweet fetch success  %+v: %+v\n", tweet.ID, tweet.Text)
+
+					t, err := time.Parse("2006-01-02T15:04:05.000Z", tweet.CreatedAt)
+					if err != nil {
+						log.Printf("%+v\n", err)
+						ctx = context.WithValue(ctx, "error", err)
+						cancel()
+						continue
+					}
+
+					// そのツイートの投稿時間が24時間以上経過しているかどうか
+					// 1日経っていないならbreak
+					if !time.Now().After(t.AddDate(0, 0, 1)) {
+						log.Printf("最古のツイートが一日経っていないので終了します。\n")
+						break
+					}
+
+					log.Printf("deleting... %+v: %+v\n", tweet.ID, tweet.Text)
+					// ツイートの削除
+					if err := tc.DestroyTweet(tweet.ID); err != nil {
+						log.Printf("%+v\n", err)
+						ctx = context.WithValue(ctx, "error", err)
+						cancel()
+						continue
+					}
 				}
 			}
 
