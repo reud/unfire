@@ -6,6 +6,7 @@ const (
 	Initializing UserStatus = iota
 	Deleted
 	Working
+	Waiting
 )
 
 func (u UserStatus) String() string {
@@ -16,6 +17,8 @@ func (u UserStatus) String() string {
 		return "Deleted"
 	case Working:
 		return "Working"
+	case Waiting:
+		return "Waiting"
 	default:
 		return "Unknown"
 	}

@@ -1,17 +1,18 @@
 package route
 
 import (
+	"unfire/api"
+	"unfire/domain/service"
+	"unfire/interface/handler"
+	handler2 "unfire/usecase/handler"
+
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	echoMw "github.com/labstack/echo/v4/middleware"
-	"unfire/api"
-	"unfire/domain/service"
-	"unfire/interface/handler"
-	"unfire/usecase"
 )
 
-func Init(as service.AuthService, au usecase.AuthUseCase) *echo.Echo {
+func Init(as service.AuthService, au handler2.AuthUseCase) *echo.Echo {
 	e := echo.New()
 	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 

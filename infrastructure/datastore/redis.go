@@ -1,7 +1,8 @@
-package persistence
+package datastore
 
 import (
 	"context"
+
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 )

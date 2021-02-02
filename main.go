@@ -7,9 +7,10 @@ import (
 	"time"
 	"unfire/config"
 	"unfire/domain/service"
-	"unfire/infrastructure/persistence"
+	"unfire/infrastructure/datastore"
 	"unfire/route"
-	"unfire/usecase"
+	"unfire/usecase/batch"
+	"unfire/usecase/handler"
 )
 
 type logWriter struct {
@@ -34,11 +35,11 @@ func init() {
 }
 
 func startBatchService() {
-	ds, err := persistence.NewRedisDatastore()
+	ds, err := datastore.NewRedisDatastore()
 	if err != nil {
 		panic(err)
 	}
-	bth := service.NewBatchService(time.Minute*3, ds)
+	bth := batch.NewBatchService(time.Minute*3, ds)
 	bth.Start()
 }
 
@@ -47,7 +48,7 @@ func main() {
 	fmt.Printf("%+v", *cfg)
 	startBatchService()
 	as := service.NewAuthService()
-	au := usecase.NewAuthUseCase()
+	au := handler.NewAuthUseCase()
 	e := route.Init(as, au)
 	if err := e.Start(":" + strconv.Itoa(cfg.Port)); err != nil {
 		panic(err)

@@ -1,4 +1,4 @@
-package persistence
+package datastore
 
 import "context"
 

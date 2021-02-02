@@ -1,4 +1,4 @@
-package service
+package batch
 
 import (
 	"context"
@@ -8,35 +8,30 @@ import (
 	"strings"
 	"time"
 	"unfire/infrastructure/client"
-	"unfire/infrastructure/persistence"
+	"unfire/infrastructure/datastore"
 	"unfire/utils"
 
 	"github.com/garyburd/go-oauth/oauth"
 	"github.com/pkg/errors"
 )
 
-type BatchService interface {
-	Start()
-}
-
-type batchService struct {
+type reloadBatchService struct {
 	interval time.Duration
-	ds       persistence.Datastore
+	ds       datastore.Datastore
 }
 
-func NewBatchService(interval time.Duration, ds persistence.Datastore) BatchService {
-	return &batchService{
+func NewReloadBatchService(interval time.Duration, ds datastore.Datastore) BatchService {
+	return &deleteBatchService{
 		interval: interval,
 		ds:       ds,
 	}
 }
-
-func (bs *batchService) Start() {
+func (bs *reloadBatchService) Start() {
 	ticker := time.NewTicker(bs.interval)
 	go func() {
 		for t := range ticker.C {
 			fmt.Printf("batch started: %+v\n", t)
-			if err := task(bs.ds); err != nil {
+			if err := reloadTask(bs.ds); err != nil {
 				fmt.Printf("batch error occured: %+v\n", err)
 			}
 			fmt.Printf("batch finished: %+v\n", t)
@@ -44,7 +39,8 @@ func (bs *batchService) Start() {
 	}()
 }
 
-func task(ds persistence.Datastore) error {
+// TODO: ガワを持ってきただけで未実装なのでdelete.goを参考に実装する。
+func reloadTask(ds datastore.Datastore) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	// 予防のために追加
@@ -158,7 +154,7 @@ func task(ds persistence.Datastore) error {
 						cancel()
 						continue
 					}
-					log.Printf("tweet fetch success  %+v: %+v\n", tweet.ID, tweet.Text)
+					log.Printf("tweet fetch success  %+v", tweet.ID)
 
 					t, err := time.Parse("2006-01-02T15:04:05.000Z", tweet.CreatedAt)
 					if err != nil {
@@ -175,7 +171,7 @@ func task(ds persistence.Datastore) error {
 						break
 					}
 
-					log.Printf("deleting... %+v: %+v\n", tweet.ID, tweet.Text)
+					log.Printf("deleting... %+v\n", tweet.ID)
 					// ツイートの削除
 					if err := tc.DestroyTweet(tweet.ID); err != nil {
 						log.Printf("%+v\n", err)
@@ -189,9 +185,5 @@ func task(ds persistence.Datastore) error {
 		}
 
 	}
-
-}
-
-func (bs *batchService) runTask() {
 
 }

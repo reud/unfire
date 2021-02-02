@@ -2,11 +2,12 @@ package handler
 
 import (
 	"fmt"
-	"github.com/labstack/echo/v4"
 	"net/http"
 	"unfire/domain/service"
 	repository2 "unfire/infrastructure/repository"
-	"unfire/usecase"
+	"unfire/usecase/handler"
+
+	"github.com/labstack/echo/v4"
 )
 
 type TwitterCallBackQuery struct {
@@ -15,8 +16,8 @@ type TwitterCallBackQuery struct {
 }
 
 type AuthHandler interface {
-	GetLogin(usecase usecase.AuthUseCase, au service.AuthService) echo.HandlerFunc
-	GetCallback(usecase usecase.AuthUseCase, as service.AuthService) echo.HandlerFunc
+	GetLogin(usecase handler.AuthUseCase, au service.AuthService) echo.HandlerFunc
+	GetCallback(usecase handler.AuthUseCase, as service.AuthService) echo.HandlerFunc
 }
 
 type authHandler struct{}
@@ -25,7 +26,7 @@ func NewAuthHandler() AuthHandler {
 	return &authHandler{}
 }
 
-func (ah *authHandler) GetLogin(usecase usecase.AuthUseCase, as service.AuthService) echo.HandlerFunc {
+func (ah *authHandler) GetLogin(usecase handler.AuthUseCase, as service.AuthService) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sr, err := repository2.NewSessionRepository("request", &c)
 		if err != nil {
@@ -41,7 +42,7 @@ func (ah *authHandler) GetLogin(usecase usecase.AuthUseCase, as service.AuthServ
 	}
 }
 
-func (ah *authHandler) GetCallback(usecase usecase.AuthUseCase, as service.AuthService) echo.HandlerFunc {
+func (ah *authHandler) GetCallback(usecase handler.AuthUseCase, as service.AuthService) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sr, err := repository2.NewSessionRepository("request", &c)
 		if err != nil {

@@ -1,16 +1,17 @@
-package usecase
+package handler
 
 import (
 	"context"
 	"fmt"
+	"log"
 	"reflect"
 	"strconv"
-	"time"
 	client2 "unfire/domain/client"
 	"unfire/domain/repository"
 	"unfire/domain/service"
 	"unfire/infrastructure/client"
-	"unfire/infrastructure/persistence"
+	"unfire/infrastructure/datastore"
+	"unfire/usecase"
 	"unfire/utils"
 
 	"github.com/garyburd/go-oauth/oauth"
@@ -18,8 +19,8 @@ import (
 )
 
 type AuthUseCase interface {
-	Login(ctx RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error)
-	Callback(ctx RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error)
+	Login(ctx usecase.RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error)
+	Callback(ctx usecase.RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error)
 }
 
 type authUseCase struct {
@@ -66,7 +67,7 @@ func isnil(x interface{}) bool {
 }
 
 // Login: 次のURLとerrorを返す。
-func (au *authUseCase) Login(ctx RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error) {
+func (au *authUseCase) Login(ctx usecase.RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error) {
 
 	// パラメータのバインド
 	ps := newGetLoginParameter()
@@ -111,7 +112,7 @@ func (au *authUseCase) Login(ctx RequestContext, mn repository.SessionRepository
 
 // TODO: (これもしやecho.Contextじゃなくていい感じの引数にすればライブラリ非依存でテスト出来てめっちゃハッピーになるのでは？)
 // Callback: 次のurlかerrorを返す。
-func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionRepository, as service.AuthService) (string, error) {
+func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.SessionRepository, as service.AuthService) (string, error) {
 	q := new(TwitterCallbackQuery)
 	if err := ctx.Bind(q); err != nil {
 		return "", err
@@ -158,18 +159,26 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 	}
 	fmt.Printf("session cleared\n")
 
-	ds, err := persistence.NewRedisDatastore()
+	ds, err := datastore.NewRedisDatastore()
 	if err != nil {
 		return "", err
 	}
 
-	if err := ds.SetString(ctx.Request().Context(), tc.FetchMe().ID+utils.StatusSuffix, utils.Initializing.String()); err != nil {
-		return "", err
-	}
+	dc := service.NewDatastoreController(ds)
+	userID := tc.FetchMe().ID
 
-	fmt.Printf("goroutine start \n")
+	// ユーザ一覧情報に保存
+	dc.AppendToUsers(ctx.Request().Context(), userID)
+
+	// 認証情報を保存する
+	dc.StoreAuthorizeData(ctx.Request().Context(), userID, at)
+
+	// ユーザを初期化中に変更
+	dc.SetUserStatus(ctx.Request().Context(), userID, utils.Initializing)
+
 	// ツイートの全ロードを行い、各種datastoreに格納を行う
 	go func(ctx context.Context) {
+		log.Printf("goroutine start \n")
 
 		tweets, err := tc.FetchTweets(client2.GetAll())
 
@@ -178,58 +187,21 @@ func (au *authUseCase) Callback(ctx RequestContext, mn repository.SessionReposit
 			return
 		}
 
-		for _, v := range tweets {
-			if err := ds.AppendString(ctx, tc.FetchMe().ID+utils.TweetsSuffix, v.ID); err != nil {
-				fmt.Printf("redis error. tweet append failed: %+v", err)
-				return
-			}
-		}
+		// ツイートの保存
+		dc.StoreAllTweet(ctx, userID, tweets)
 
-		lnth, err := ds.ListLen(ctx, tc.FetchMe().ID+utils.TweetsSuffix)
-		if err != nil {
-			fmt.Printf("redis error. tweet read(ListLen): %+v", err)
+		// ツイートが入っていない場合はWaitingステータスに変更する。
+		if len(tweets) == 0 {
+			dc.SetUserStatus(ctx, userID, utils.Waiting)
 			return
 		}
 
-		// ツイートが入っていれば、一番古い時間を格納する。(多分一番最後)
-		if lnth != 0 {
-			oldestCreatedAt, err := time.Parse("2006-01-02T15:04:05.000Z", tweets[len(tweets)-1].CreatedAt)
-			if err != nil {
-				fmt.Printf("time parse failed(originalCreatedAT -> time.Date) from: %+v", tweets[len(tweets)-1].CreatedAt)
-				return
-			}
+		// ツイートが入っている場合はツイートの中で一番古い時間をタイムラインに格納する
+		dc.InsertTweetToTimeLine(ctx, userID, tweets[len(tweets)-1])
 
-			idi64 := oldestCreatedAt.Unix()
+		// タスク終了後はユーザのステータスをワーキングにする。
+		dc.SetUserStatus(ctx, userID, utils.Working)
 
-			// 一番古いツイートの作成時間(unixtime)とそのツイートの保持者を格納する。
-			if err := ds.Insert(ctx, utils.TimeLine, float64(idi64-utils.TimeLinePrefix), strconv.FormatInt(oldestCreatedAt.Unix(), 10)+"_"+tc.FetchMe().ID); err != nil {
-				fmt.Printf("failed to insert timeline: %+v", err)
-				return
-			}
-		}
-
-		// token周りの情報を保存(at)
-		if err := ds.SetHash(ctx, utils.TokenSuffix+tc.FetchMe().ID, "at", at.Token); err != nil {
-			fmt.Printf("failed to save at.Token: %+v", err)
-			return
-		}
-
-		// token周りの情報を保存(sec)
-		if err := ds.SetHash(ctx, utils.TokenSuffix+tc.FetchMe().ID, "sec", at.Secret); err != nil {
-			fmt.Printf("failed to save at.Sec: %+v", err)
-			return
-		}
-
-		// user一覧情報に保存
-		if err := ds.AppendString(ctx, utils.Users, tc.FetchMe().ID); err != nil {
-			fmt.Printf("failed to set add user: %+v", err)
-			return
-		}
-
-		if err := ds.SetString(ctx, tc.FetchMe().ID+utils.StatusSuffix, utils.Working.String()); err != nil {
-			fmt.Printf("failed to set status timeline: %+v", err)
-			return
-		}
 		fmt.Printf("goroutine finished\n")
 	}(context.Background())
 
