@@ -33,7 +33,6 @@ func (bs *reloadBatchService) Start() {
 	}()
 }
 
-// TODO: ガワを持ってきただけで未実装なのでdelete.goを参考に実装する。
 // ユーザ一覧をO(n)で取得して、Waiting状態のユーザに対してツイートのロードを行う。
 func reloadTask(dc usecase.DatastoreController) {
 	ctx := context.Background()
@@ -42,6 +41,7 @@ func reloadTask(dc usecase.DatastoreController) {
 	defer cancel()
 
 	// TODO: N+1だけど解消のしようがない気もする。
+	// FIXME: ここgoroutineにすれば速度は間違いなく上がる。別に今は速度要らないけど、時期を見て確認する。
 	users := dc.GetAllUsers(ctx)
 	for _, twitterID := range users {
 		if status := dc.GetUserStatus(ctx, twitterID); status == utils.Waiting {

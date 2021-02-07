@@ -5,6 +5,7 @@ import (
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"net/http"
+	"unfire/domain/repository"
 )
 
 type Manager struct {
@@ -12,7 +13,17 @@ type Manager struct {
 	key     string
 }
 
-func NewSessionRepository(key string, c *echo.Context) (*Manager, error) {
+type SessionInitializer interface {
+	NewSessionRepository(key string, c *echo.Context) (repository.SessionRepository, error)
+}
+
+type sessionInitializerImpl struct{}
+
+func NewSessionInitializer() SessionInitializer {
+	return &sessionInitializerImpl{}
+}
+
+func (si *sessionInitializerImpl) NewSessionRepository(key string, c *echo.Context) (repository.SessionRepository, error) {
 	sess, err := session.Get(key, *c)
 	if err != nil {
 		return nil, err

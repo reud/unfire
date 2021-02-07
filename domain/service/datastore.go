@@ -120,7 +120,9 @@ func (dc *DatastoreController) GetOldestTweetInfoFromTimeLine(ctx context.Contex
 }
 
 func (dc *DatastoreController) PopOldestTweetInfoFromTimeLine(ctx context.Context) {
-
+	if err := dc.ds.PopMin(ctx, utils.TimeLine); err != nil {
+		log.Fatalf("failed to pop oldest tweet (PopOldestTweetInfoFromTimeLine) err: %+v", err)
+	}
 }
 
 func (dc *DatastoreController) GetUserLastTweet(ctx context.Context, twitterID string) (string, bool) {

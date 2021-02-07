@@ -86,7 +86,6 @@ func fetchTweetDefaultOption() client.FetchTweetOption {
 	}
 }
 
-// TODO: since_idにバグあり。 https://memo.furyutei.work/entry/20100124/1264342029 pagingで対応する。
 // FetchTweets ツイート取得する。
 func (tc *twitterClient) FetchTweets(options ...client.FetchTweetOptionFunc) ([]model.Tweet, error) {
 	log.Printf("start fetch tweets \n")

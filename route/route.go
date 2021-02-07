@@ -3,6 +3,7 @@ package route
 import (
 	"unfire/api"
 	"unfire/domain/service"
+	"unfire/infrastructure/repository"
 	"unfire/interface/handler"
 	handler2 "unfire/usecase/handler"
 
@@ -12,7 +13,7 @@ import (
 	echoMw "github.com/labstack/echo/v4/middleware"
 )
 
-func Init(as service.AuthService, au handler2.AuthUseCase) *echo.Echo {
+func Init(as service.AuthService, au handler2.AuthUseCase, si repository.SessionInitializer) *echo.Echo {
 	e := echo.New()
 	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 
@@ -26,8 +27,8 @@ func Init(as service.AuthService, au handler2.AuthUseCase) *echo.Echo {
 
 	auth := e.Group("/auth")
 	{
-		auth.GET("/login", ah.GetLogin(au, as))
-		auth.GET("/callback", ah.GetCallback(au, as))
+		auth.GET("/login", ah.GetLogin(au, as, si))
+		auth.GET("/callback", ah.GetCallback(au, as, si))
 	}
 
 	e.GET("/health", api.Health())

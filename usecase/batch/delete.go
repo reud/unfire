@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"unfire/domain/service"
 	"unfire/infrastructure/client"
-	"unfire/infrastructure/datastore"
 	"unfire/usecase"
 )
 
@@ -16,10 +14,10 @@ type deleteBatchService struct {
 	dc       usecase.DatastoreController
 }
 
-func NewDeleteBatchService(interval time.Duration, ds datastore.Datastore) BatchService {
+func NewDeleteBatchService(interval time.Duration, dc usecase.DatastoreController) BatchService {
 	return &deleteBatchService{
 		interval: interval,
-		dc:       service.NewDatastoreController(ds),
+		dc:       dc,
 	}
 }
 
