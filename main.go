@@ -43,11 +43,13 @@ func startBatchService() {
 	dc := service.NewDatastoreController(ds)
 	// start reload batch
 	{
+		// TODO: ここを環境変数で設定可能にする。
 		bth := batch.NewReloadBatchService(time.Minute*3, dc)
 		bth.Start()
 	}
 	// start delete batch
 	{
+		// TODO: ここを環境変数で設定可能にする。
 		bth := batch.NewDeleteBatchService(time.Minute*3, dc)
 		bth.Start()
 	}
