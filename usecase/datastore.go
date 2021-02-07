@@ -22,4 +22,8 @@ type DatastoreController interface {
 	PopOldestTweetInfoFromTimeLine(ctx context.Context)
 	// GetUserLastTweet: ユーザの一番古いツイートIDを取得する。 returns <userID, status(if false, maybe user tweets empty)>
 	GetUserLastTweet(ctx context.Context, twitterID string) (string, bool)
+	// GetAllUsers: 全ユーザのtwitterIDを取得する。
+	GetAllUsers(ctx context.Context) []string
+	// ユーザのステータスを取得する。
+	GetUserStatus(ctx context.Context, twitterID string) utils.UserStatus
 }

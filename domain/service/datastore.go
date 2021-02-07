@@ -120,7 +120,9 @@ func (dc *DatastoreController) GetOldestTweetInfoFromTimeLine(ctx context.Contex
 }
 
 func (dc *DatastoreController) PopOldestTweetInfoFromTimeLine(ctx context.Context) {
-
+	if err := dc.ds.PopMin(ctx, utils.TimeLine); err != nil {
+		log.Fatalf("failed to pop oldest tweet (PopOldestTweetInfoFromTimeLine) err: %+v", err)
+	}
 }
 
 func (dc *DatastoreController) GetUserLastTweet(ctx context.Context, twitterID string) (string, bool) {
@@ -131,6 +133,28 @@ func (dc *DatastoreController) GetUserLastTweet(ctx context.Context, twitterID s
 	}
 
 	return lastTweetID, true
+}
+
+// GetAllUsers: 全ユーザの取得。失敗して良い場合は無いのでfatalさせる。
+func (dc *DatastoreController) GetAllUsers(ctx context.Context) []string {
+	listLen, err := dc.ds.ListLen(ctx, utils.Users)
+	if err != nil {
+		log.Fatalf("failed to fetch users length (GetAllUsers) err: %+v", err)
+	}
+	users, err := dc.ds.LRange(ctx, utils.Users, 0, listLen-1)
+	if err != nil {
+		log.Fatalf("failed to fetch users (GetAllUsers) err: %+v", err)
+	}
+	return users
+}
+
+// GetUserStatus: twitterIDからユーザのステータスを取得する。
+func (dc *DatastoreController) GetUserStatus(ctx context.Context, twitterID string) utils.UserStatus {
+	statusStr, err := dc.ds.GetString(ctx, twitterID+utils.StatusSuffix)
+	if err != nil {
+		log.Fatalf("failed to fetch userstatus string (GetUserStatus) err: %+v", statusStr)
+	}
+	return utils.StrToUserStatus(statusStr)
 }
 
 func NewDatastoreController(ds datastore.Datastore) usecase.DatastoreController {

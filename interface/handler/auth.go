@@ -16,8 +16,8 @@ type TwitterCallBackQuery struct {
 }
 
 type AuthHandler interface {
-	GetLogin(usecase handler.AuthUseCase, au service.AuthService) echo.HandlerFunc
-	GetCallback(usecase handler.AuthUseCase, as service.AuthService) echo.HandlerFunc
+	GetLogin(usecase handler.AuthUseCase, au service.AuthService, si repository2.SessionInitializer) echo.HandlerFunc
+	GetCallback(usecase handler.AuthUseCase, as service.AuthService, si repository2.SessionInitializer) echo.HandlerFunc
 }
 
 type authHandler struct{}
@@ -26,9 +26,9 @@ func NewAuthHandler() AuthHandler {
 	return &authHandler{}
 }
 
-func (ah *authHandler) GetLogin(usecase handler.AuthUseCase, as service.AuthService) echo.HandlerFunc {
+func (ah *authHandler) GetLogin(usecase handler.AuthUseCase, as service.AuthService, si repository2.SessionInitializer) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sr, err := repository2.NewSessionRepository("request", &c)
+		sr, err := si.NewSessionRepository("request", &c)
 		if err != nil {
 			fmt.Printf("err!: %+v", err)
 			return c.JSON(http.StatusBadRequest, err)
@@ -42,9 +42,9 @@ func (ah *authHandler) GetLogin(usecase handler.AuthUseCase, as service.AuthServ
 	}
 }
 
-func (ah *authHandler) GetCallback(usecase handler.AuthUseCase, as service.AuthService) echo.HandlerFunc {
+func (ah *authHandler) GetCallback(usecase handler.AuthUseCase, as service.AuthService, si repository2.SessionInitializer) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sr, err := repository2.NewSessionRepository("request", &c)
+		sr, err := si.NewSessionRepository("request", &c)
 		if err != nil {
 			fmt.Printf("err!: %+v", err)
 			return c.JSON(http.StatusBadRequest, err)

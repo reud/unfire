@@ -27,6 +27,11 @@ func (rds *RedisDatastore) AppendString(ctx context.Context, key string, value s
 	return rds.client.RPush(ctx, key, value).Err()
 }
 
+// LRange: start <= x <= end を満たす要素を取得する。 (0-indexed)
+func (rds *RedisDatastore) LRange(ctx context.Context, key string, start int64, end int64) ([]string, error) {
+	return rds.client.LRange(ctx, key, start, end).Result()
+}
+
 func (rds *RedisDatastore) LastPop(ctx context.Context, key string) (string, error) {
 	return rds.client.RPop(ctx, key).Result()
 }

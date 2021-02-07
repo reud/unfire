@@ -24,4 +24,6 @@ type Datastore interface {
 	Insert(ctx context.Context, key string, score float64, member interface{}) error
 	SetHash(ctx context.Context, pkey string, ckey string, value string) error
 	GetHash(ctx context.Context, pkey string, ckey string) (string, error)
+	// LRange: start <= x <= end を満たす要素を取得する。 (0-indexed)
+	LRange(ctx context.Context, key string, start int64, end int64) ([]string, error)
 }

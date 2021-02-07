@@ -8,6 +8,7 @@ import (
 	"unfire/config"
 	"unfire/domain/service"
 	"unfire/infrastructure/datastore"
+	"unfire/infrastructure/repository"
 	"unfire/route"
 	"unfire/usecase/batch"
 	"unfire/usecase/handler"
@@ -39,8 +40,19 @@ func startBatchService() {
 	if err != nil {
 		panic(err)
 	}
-	bth := batch.NewBatchService(time.Minute*3, ds)
-	bth.Start()
+	dc := service.NewDatastoreController(ds)
+	// start reload batch
+	{
+		// TODO: ここを環境変数で設定可能にする。
+		bth := batch.NewReloadBatchService(time.Minute*3, dc)
+		bth.Start()
+	}
+	// start delete batch
+	{
+		// TODO: ここを環境変数で設定可能にする。
+		bth := batch.NewDeleteBatchService(time.Minute*3, dc)
+		bth.Start()
+	}
 }
 
 func main() {
@@ -49,7 +61,8 @@ func main() {
 	startBatchService()
 	as := service.NewAuthService()
 	au := handler.NewAuthUseCase()
-	e := route.Init(as, au)
+	si := repository.NewSessionInitializer()
+	e := route.Init(as, au, si)
 	if err := e.Start(":" + strconv.Itoa(cfg.Port)); err != nil {
 		panic(err)
 	}

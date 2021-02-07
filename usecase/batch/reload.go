@@ -4,26 +4,22 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
-	"strings"
 	"time"
+	client2 "unfire/domain/client"
 	"unfire/infrastructure/client"
-	"unfire/infrastructure/datastore"
+	"unfire/usecase"
 	"unfire/utils"
-
-	"github.com/garyburd/go-oauth/oauth"
-	"github.com/pkg/errors"
 )
 
 type reloadBatchService struct {
 	interval time.Duration
-	ds       datastore.Datastore
+	dc       usecase.DatastoreController
 }
 
-func NewReloadBatchService(interval time.Duration, ds datastore.Datastore) BatchService {
-	return &deleteBatchService{
+func NewReloadBatchService(interval time.Duration, dc usecase.DatastoreController) BatchService {
+	return &reloadBatchService{
 		interval: interval,
-		ds:       ds,
+		dc:       dc,
 	}
 }
 func (bs *reloadBatchService) Start() {
@@ -31,159 +27,56 @@ func (bs *reloadBatchService) Start() {
 	go func() {
 		for t := range ticker.C {
 			fmt.Printf("batch started: %+v\n", t)
-			if err := reloadTask(bs.ds); err != nil {
-				fmt.Printf("batch error occured: %+v\n", err)
-			}
+			reloadTask(bs.dc)
 			fmt.Printf("batch finished: %+v\n", t)
 		}
 	}()
 }
 
-// TODO: ガワを持ってきただけで未実装なのでdelete.goを参考に実装する。
-func reloadTask(ds datastore.Datastore) error {
+// ユーザ一覧をO(n)で取得して、Waiting状態のユーザに対してツイートのロードを行う。
+func reloadTask(dc usecase.DatastoreController) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	// 予防のために追加
 	defer cancel()
-	for {
-		select {
-		case <-ctx.Done():
-			err, ok := ctx.Value("error").(error)
-			if !ok {
-				return err
-			}
-			return nil
-		default:
-			log.Printf("picking oldest tweets")
-			// 保存されているツイートの中で最も古いものを取得する。
-			data, err := ds.GetMinElement(ctx, utils.TimeLine)
+
+	// TODO: N+1だけど解消のしようがない気もする。
+	// FIXME: ここgoroutineにすれば速度は間違いなく上がる。別に今は速度要らないけど、時期を見て確認する。
+	users := dc.GetAllUsers(ctx)
+	for _, twitterID := range users {
+		if status := dc.GetUserStatus(ctx, twitterID); status == utils.Waiting {
+			dc.SetUserStatus(ctx, twitterID, utils.Initializing)
+
+			at := dc.PickAuthorizeData(ctx, twitterID)
+			cred, err := client.NewTwitterClient(at)
+			// tokenの有効期限切れの場合なども考えてハンドリングする。
 			if err != nil {
-				log.Printf("GetMinElement Error: %+v\n", err)
-				ctx = context.WithValue(ctx, "error", err)
-				cancel()
+				log.Printf("generate client failed (reloadTask): user status change to deleted. err: %+v", err)
+				dc.SetUserStatus(ctx, twitterID, utils.Deleted)
 				continue
 			}
 
-			sp := strings.Split(data, "_")
-			if len(sp) != 2 {
-				err := errors.New(fmt.Sprintf("bad data got: %+v", sp))
-				log.Printf("strings.Split Error: %+v\n", err)
-				ctx = context.WithValue(ctx, "error", err)
-				cancel()
-				continue
-			}
-
-			tweetTime, err := strconv.ParseInt(sp[0], 10, 64)
+			tweets, err := cred.FetchTweets(client2.GetAll())
 			if err != nil {
-				log.Printf("%+v\n", err)
-				ctx = context.WithValue(ctx, "error", err)
-				cancel()
+				log.Printf("reload tweets failed (reloadTask): user status change to deleted. err: %+v", err)
+				dc.SetUserStatus(ctx, twitterID, utils.Deleted)
 				continue
 			}
 
-			userID := sp[1]
-
-			// 取得したuserIDのaccess tokenを取り出す。
-			atStr, err := ds.GetHash(ctx, utils.TokenSuffix+userID, "at")
-			if err != nil {
-				log.Printf("pick at error: : %+v\n", err)
-				ctx = context.WithValue(ctx, "error", err)
-				cancel()
+			// ツイートが入っていない場合はWaitingステータスに戻す
+			if len(tweets) == 0 {
+				dc.SetUserStatus(ctx, twitterID, utils.Waiting)
 				continue
 			}
 
-			// 取得したuserIDのsecret tokenを取り出す
-			secStr, err := ds.GetHash(ctx, utils.TokenSuffix+userID, "sec")
-			if err != nil {
-				log.Printf("pick secret token error:  %+v\n", err)
-				ctx = context.WithValue(ctx, "error", err)
-				cancel()
-				continue
-			}
+			// ツイートが入っている場合はツイートの中で一番古い時間をタイムラインに格納する
+			dc.InsertTweetToTimeLine(ctx, twitterID, tweets[len(tweets)-1])
 
-			// 認可情報を作成
-			cred := &oauth.Credentials{
-				Token:  atStr,
-				Secret: secStr,
-			}
+			// 全ツイートの保管
+			dc.StoreAllTweet(ctx, twitterID, tweets)
 
-			log.Printf("created token:%+v secret:%+v\n", cred.Token, cred.Secret)
-			tc, err := client.NewTwitterClient(cred)
-			if err != nil {
-				log.Printf("%+v\n", err)
-				ctx = context.WithValue(ctx, "error", err)
-				cancel()
-				continue
-			}
-
-			// その最小値が24時間以上経過しているかどうか。
-			t := time.Unix(tweetTime, 0)
-			// 経過していない場合は終了
-			if !time.Now().After(t.AddDate(0, 0, 1)) {
-				log.Printf("its new tweet \n")
-				cancel()
-				continue
-			}
-
-			// 24時間以上経過しているならばその最小値を消す。
-			if err := ds.PopMin(ctx, utils.TimeLine); err != nil {
-				log.Printf("%+v\n", err)
-				ctx = context.WithValue(ctx, "error", err)
-				cancel()
-				continue
-			}
-
-			// そのuserIDのtweetを後ろから取る。
-			for {
-				select {
-				case <-ctx.Done():
-					break
-				default:
-					lastTweetID, err := ds.LastPop(ctx, userID+utils.TweetsSuffix)
-					if err != nil {
-						log.Printf("%+v\n", err)
-						ctx = context.WithValue(ctx, "error", err)
-						cancel()
-						continue
-					}
-
-					tweet, err := tc.FetchTweetFromIDStr(lastTweetID)
-					if err != nil {
-						log.Printf("%+v\n", err)
-						ctx = context.WithValue(ctx, "error", err)
-						cancel()
-						continue
-					}
-					log.Printf("tweet fetch success  %+v", tweet.ID)
-
-					t, err := time.Parse("2006-01-02T15:04:05.000Z", tweet.CreatedAt)
-					if err != nil {
-						log.Printf("%+v\n", err)
-						ctx = context.WithValue(ctx, "error", err)
-						cancel()
-						continue
-					}
-
-					// そのツイートの投稿時間が24時間以上経過しているかどうか
-					// 1日経っていないならbreak
-					if !time.Now().After(t.AddDate(0, 0, 1)) {
-						log.Printf("最古のツイートが一日経っていないので終了します。\n")
-						break
-					}
-
-					log.Printf("deleting... %+v\n", tweet.ID)
-					// ツイートの削除
-					if err := tc.DestroyTweet(tweet.ID); err != nil {
-						log.Printf("%+v\n", err)
-						ctx = context.WithValue(ctx, "error", err)
-						cancel()
-						continue
-					}
-				}
-			}
-
+			// タスク終了後はユーザのステータスをワーキングにする。
+			dc.SetUserStatus(ctx, twitterID, utils.Working)
 		}
-
 	}
-
 }
