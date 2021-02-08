@@ -17,6 +17,7 @@ import (
 
 func Init(as service.AuthService, au handler2.AuthUseCase, si repository.SessionInitializer, ru admin.RestartUseCase) *echo.Echo {
 	e := echo.New()
+	// TODO: "secret"はランダムな文字列に変更する。
 	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 
 	e.Use(echoMw.CORSWithConfig(echoMw.CORSConfig{

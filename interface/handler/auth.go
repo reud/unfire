@@ -65,11 +65,12 @@ func (ah *authHandler) GetStop(usecase handler.AuthUseCase, si repository2.Sessi
 		sr, err := si.NewSessionRepository("request", &c)
 		if err != nil {
 			fmt.Printf("err!: %+v", err)
-			return c.JSON(http.StatusBadRequest, err)
+			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 		result, err := usecase.Stop(c, sr)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, err)
+			fmt.Printf("err!: %+v", err)
+			return c.JSON(http.StatusBadRequest, err.Error())
 		}
 		return c.JSON(http.StatusOK, result)
 	}

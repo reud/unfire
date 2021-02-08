@@ -153,12 +153,13 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 
 	op, err := getOptions(mn)
 
-	err = mn.Clear(ctx.Request(), &ctx.Response().Writer)
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Printf("session cleared\n")
+	/*
+		err = mn.Clear(ctx.Request(), &ctx.Response().Writer)
+		if err != nil {
+			return "", err
+		}
+		fmt.Printf("session cleared\n")
+	*/
 
 	ds, err := datastore.NewRedisDatastore()
 	if err != nil {
@@ -219,11 +220,19 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 
 func (au *authUseCase) Stop(ctx usecase.RequestContext, mn repository.SessionRepository) (string, error) {
 	id, ok := mn.Get("twitter_id")
-
 	if !ok {
 		return "", errors.New("failed to fetch twitter_id")
 	}
-	return "it is test your id :" + id.(string), nil
+
+	ds, err := datastore.NewRedisDatastore()
+	if err != nil {
+		return "", err
+	}
+
+	dc := service.NewDatastoreController(ds)
+	dc.SetUserStatus(ctx.Request().Context(), id.(string), utils.Deleted)
+
+	return "ok, change status success id :" + id.(string), nil
 }
 
 func getOptions(mn repository.SessionRepository) (*Option, error) {
