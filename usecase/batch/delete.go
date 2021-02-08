@@ -35,6 +35,12 @@ func (bs *deleteBatchService) Start() {
 	}()
 }
 
+func (bs *deleteBatchService) StartOnce() {
+	fmt.Println("[force]delete batch started")
+	reloadTask(bs.dc)
+	fmt.Println("[force]delete batch finished")
+}
+
 func deleteTask(dc usecase.DatastoreController) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)

@@ -12,6 +12,7 @@ type Config struct {
 	TwitterConsumerKey    string `envconfig:"TWITTER_CONSUMER_KEY"`
 	TwitterConsumerSecret string `envconfig:"TWITTER_CONSUMER_SECRET"`
 	Domain                string `envconfig:"DOMAIN" default:"unfire.reud.app"`
+	AdminAPIPassword      string `envconfig:"ADMIN_API_PASSWORD" default:"test"`
 }
 
 var sharedConfig = readConfig()
