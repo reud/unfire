@@ -7,6 +7,7 @@ import (
 	"time"
 	"unfire/infrastructure/client"
 	"unfire/usecase"
+	"unfire/utils"
 )
 
 type deleteBatchService struct {
@@ -82,6 +83,8 @@ func deleteTask(dc usecase.DatastoreController) error {
 
 				tweetID, ok := dc.GetUserLastTweet(ctx, userID)
 				if !ok {
+					// ツイートが存在していない可能性もあるのでWaitingにする。
+					dc.SetUserStatus(ctx, tweetID, utils.Waiting)
 					break
 				}
 
@@ -106,6 +109,8 @@ func deleteTask(dc usecase.DatastoreController) error {
 				// 1日経っていないならbreak
 				if !time.Now().After(t.AddDate(0, 0, 1)) {
 					log.Printf("最古のツイートが一日経っていないので終了します。\n")
+					dc.InsertTweetToTimeLine(ctx, userID, *tweet)
+					cancel()
 					break
 				}
 
@@ -115,7 +120,7 @@ func deleteTask(dc usecase.DatastoreController) error {
 					log.Printf("%+v\n", err)
 					ctx = context.WithValue(ctx, "error", err)
 					cancel()
-					continue
+					break
 				}
 
 			}
