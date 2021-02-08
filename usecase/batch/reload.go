@@ -22,6 +22,7 @@ func NewReloadBatchService(interval time.Duration, dc usecase.DatastoreControlle
 		dc:       dc,
 	}
 }
+
 func (bs *reloadBatchService) Start() {
 	ticker := time.NewTicker(bs.interval)
 	go func() {
@@ -31,6 +32,12 @@ func (bs *reloadBatchService) Start() {
 			fmt.Printf("batch finished: %+v\n", t)
 		}
 	}()
+}
+
+func (bs *reloadBatchService) StartOnce() {
+	fmt.Println("[force]reload batch started")
+	reloadTask(bs.dc)
+	fmt.Println("[force]reload batch finished")
 }
 
 // ユーザ一覧をO(n)で取得して、Waiting状態のユーザに対してツイートのロードを行う。

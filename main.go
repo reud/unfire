@@ -12,6 +12,7 @@ import (
 	"unfire/route"
 	"unfire/usecase/batch"
 	"unfire/usecase/handler"
+	"unfire/usecase/handler/admin"
 )
 
 type logWriter struct {
@@ -35,34 +36,35 @@ func init() {
 	log.Println("Unfire Started!")
 }
 
-func startBatchService() {
+func initBatchService() batch.Services {
 	ds, err := datastore.NewRedisDatastore()
 	if err != nil {
 		panic(err)
 	}
 	dc := service.NewDatastoreController(ds)
+
 	// start reload batch
-	{
-		// TODO: ここを環境変数で設定可能にする。
-		bth := batch.NewReloadBatchService(time.Minute*3, dc)
-		bth.Start()
-	}
-	// start delete batch
-	{
-		// TODO: ここを環境変数で設定可能にする。
-		bth := batch.NewDeleteBatchService(time.Minute*3, dc)
-		bth.Start()
-	}
+	// TODO: ここを環境変数で設定可能にする。
+	rbth := batch.NewReloadBatchService(time.Minute*3, dc)
+	// TODO: ここを環境変数で設定可能にする。
+	dbth := batch.NewDeleteBatchService(time.Minute*3, dc)
+	return batch.NewServices(rbth, dbth)
 }
 
 func main() {
 	cfg := config.GetInstance()
 	fmt.Printf("%+v", *cfg)
-	startBatchService()
+	sv := initBatchService()
+
+	sv.Launch()
+
 	as := service.NewAuthService()
+
 	au := handler.NewAuthUseCase()
+	ru := admin.NewRestartUseCase(sv)
+
 	si := repository.NewSessionInitializer()
-	e := route.Init(as, au, si)
+	e := route.Init(as, au, si, ru)
 	if err := e.Start(":" + strconv.Itoa(cfg.Port)); err != nil {
 		panic(err)
 	}
