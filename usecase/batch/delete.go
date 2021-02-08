@@ -41,6 +41,7 @@ func (bs *deleteBatchService) StartOnce() {
 	fmt.Println("[force]delete batch finished")
 }
 
+// TODO: 同時に二個以上走らせると死ぬ。channelで状態を通知するとかやる？
 func deleteTask(dc usecase.DatastoreController) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -59,8 +60,15 @@ func deleteTask(dc usecase.DatastoreController) error {
 			// 保存されているツイートの中で最も古いものを取得する。
 			t, userID, err := dc.GetOldestTweetInfoFromTimeLine(ctx)
 			if err != nil {
-				log.Printf("error in deleteTask: %+v\n ", err)
-				return err
+				// ここでツイートが存在しない可能性もあるのでエラーを返したりはしない。
+				log.Printf("failed to fetch OldestTweet: %+v\n ", err)
+				return nil
+			}
+
+			// 削除済みユーザの場合はそれをpopしてスキップ
+			if status := dc.GetUserStatus(ctx, userID); status == utils.Deleted {
+				dc.PopOldestTweetInfoFromTimeLine(ctx)
+				continue
 			}
 
 			cred := dc.PickAuthorizeData(ctx, userID)

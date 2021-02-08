@@ -25,12 +25,12 @@ func Init(as service.AuthService, au handler2.AuthUseCase, si repository.Session
 	}))
 	e.Use(echoMw.Logger())
 
-	ah := handler.NewAuthHandler()
-
 	auth := e.Group("/auth")
 	{
+		ah := handler.NewAuthHandler()
 		auth.GET("/login", ah.GetLogin(au, as, si))
 		auth.GET("/callback", ah.GetCallback(au, as, si))
+		auth.GET("/stop", ah.GetStop(au, si))
 	}
 
 	e.GET("/health", api.Health())
