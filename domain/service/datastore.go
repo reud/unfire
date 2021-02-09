@@ -157,6 +157,13 @@ func (dc *DatastoreController) GetUserStatus(ctx context.Context, twitterID stri
 	return utils.StrToUserStatus(statusStr)
 }
 
+// DeleteUserFromUsersTable
+func (dc *DatastoreController) DeleteUserFromUsersTable(ctx context.Context, twitterID string) {
+	if err := dc.ds.LRem(ctx, utils.Users, 1, twitterID); err != nil {
+		log.Fatalf("データ不整合? (DeleteUserFromUsersTable) err : %+v", err)
+	}
+}
+
 func NewDatastoreController(ds datastore.Datastore) usecase.DatastoreController {
 	return &DatastoreController{ds: ds}
 }

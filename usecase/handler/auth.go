@@ -21,6 +21,7 @@ import (
 type AuthUseCase interface {
 	Login(ctx usecase.RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error)
 	Callback(ctx usecase.RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error)
+	Stop(ctx usecase.RequestContext, mn repository.SessionRepository) (string, error)
 }
 
 type authUseCase struct {
@@ -110,7 +111,6 @@ func (au *authUseCase) Login(ctx usecase.RequestContext, mn repository.SessionRe
 	return u, nil
 }
 
-// TODO: (これもしやecho.Contextじゃなくていい感じの引数にすればライブラリ非依存でテスト出来てめっちゃハッピーになるのでは？)
 // Callback: 次のurlかerrorを返す。
 func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.SessionRepository, as service.AuthService) (string, error) {
 	q := new(TwitterCallbackQuery)
@@ -153,11 +153,13 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 
 	op, err := getOptions(mn)
 
-	err = mn.Clear(ctx.Request(), &ctx.Response().Writer)
-	if err != nil {
-		return "", err
-	}
-	fmt.Printf("session cleared\n")
+	/*
+		err = mn.Clear(ctx.Request(), &ctx.Response().Writer)
+		if err != nil {
+			return "", err
+		}
+		fmt.Printf("session cleared\n")
+	*/
 
 	ds, err := datastore.NewRedisDatastore()
 	if err != nil {
@@ -175,6 +177,13 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 
 	// ユーザを初期化中に変更
 	dc.SetUserStatus(ctx.Request().Context(), userID, utils.Initializing)
+
+	// twitterIDをセッションに保存
+	// TODO: これ、twitter_idがcookieに入るんじゃなくてsessionIDが入る想定だけど、間違っているかも。動作確認を行う。
+	mn.Set("twitter_id", userID)
+	if err := mn.Save(ctx.Request(), &ctx.Response().Writer); err != nil {
+		log.Printf("failed to save session... err: %+v", err)
+	}
 
 	// ツイートの全ロードを行い、各種datastoreに格納を行う
 	go func(ctx context.Context) {
@@ -207,6 +216,31 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 
 	fmt.Printf("callback request finished\n")
 	return op.CallbackUrl, nil
+}
+
+func (au *authUseCase) Stop(ctx usecase.RequestContext, mn repository.SessionRepository) (string, error) {
+	id, ok := mn.Get("twitter_id")
+	if !ok {
+		return "", errors.New("failed to fetch twitter_id")
+	}
+
+	ds, err := datastore.NewRedisDatastore()
+	if err != nil {
+		return "", err
+	}
+
+	dc := service.NewDatastoreController(ds)
+
+	nowStatus := dc.GetUserStatus(ctx.Request().Context(), id.(string))
+
+	if nowStatus == utils.Deleted {
+		return "user already deleted", errors.New("user already deleted")
+	}
+
+	dc.SetUserStatus(ctx.Request().Context(), id.(string), utils.Deleted)
+	dc.DeleteUserFromUsersTable(ctx.Request().Context(), id.(string))
+
+	return "ok, change status success id :" + id.(string), nil
 }
 
 func getOptions(mn repository.SessionRepository) (*Option, error) {
