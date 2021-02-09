@@ -9,8 +9,8 @@ import (
 
 type Config struct {
 	Port                  int    `envconfig:"APP_PORT" default:"5000"`
-	TwitterConsumerKey    string `envconfig:"TWITTER_CONSUMER_KEY"`
-	TwitterConsumerSecret string `envconfig:"TWITTER_CONSUMER_SECRET"`
+	TwitterConsumerKey    string `envconfig:"TWITTER_CONSUMER_KEY" default:"mock"`
+	TwitterConsumerSecret string `envconfig:"TWITTER_CONSUMER_SECRET" default:"mock"`
 	Domain                string `envconfig:"DOMAIN" default:"unfire.reud.app"`
 	AdminAPIPassword      string `envconfig:"ADMIN_API_PASSWORD" default:"test"`
 }
