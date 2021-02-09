@@ -230,7 +230,15 @@ func (au *authUseCase) Stop(ctx usecase.RequestContext, mn repository.SessionRep
 	}
 
 	dc := service.NewDatastoreController(ds)
+
+	nowStatus := dc.GetUserStatus(ctx.Request().Context(), id.(string))
+
+	if nowStatus == utils.Deleted {
+		return "user already deleted", errors.New("user already deleted")
+	}
+
 	dc.SetUserStatus(ctx.Request().Context(), id.(string), utils.Deleted)
+	dc.DeleteUserFromUsersTable(ctx.Request().Context(), id.(string))
 
 	return "ok, change status success id :" + id.(string), nil
 }

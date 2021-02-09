@@ -27,6 +27,11 @@ func (rds *RedisDatastore) AppendString(ctx context.Context, key string, value s
 	return rds.client.RPush(ctx, key, value).Err()
 }
 
+// LRem 最初の count 個だけ value にマッチする要素を key に対応するリストから削除する。 count が負数の場合は最後から count 個だけ削除する。
+func (rds *RedisDatastore) LRem(ctx context.Context, key string, count int64, value string) error {
+	return rds.LRem(ctx, key, count, value)
+}
+
 // LRange: start <= x <= end を満たす要素を取得する。 (0-indexed)
 func (rds *RedisDatastore) LRange(ctx context.Context, key string, start int64, end int64) ([]string, error) {
 	return rds.client.LRange(ctx, key, start, end).Result()

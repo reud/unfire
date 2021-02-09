@@ -26,4 +26,6 @@ type Datastore interface {
 	GetHash(ctx context.Context, pkey string, ckey string) (string, error)
 	// LRange: start <= x <= end を満たす要素を取得する。 (0-indexed)
 	LRange(ctx context.Context, key string, start int64, end int64) ([]string, error)
+	// LRem: 最初の count 個だけ value にマッチする要素を key に対応するリストから削除する。 count が負数の場合は最後から count 個だけ削除する。
+	LRem(ctx context.Context, key string, count int64, value string) error
 }

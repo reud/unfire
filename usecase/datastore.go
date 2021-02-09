@@ -26,4 +26,5 @@ type DatastoreController interface {
 	GetAllUsers(ctx context.Context) []string
 	// ユーザのステータスを取得する。
 	GetUserStatus(ctx context.Context, twitterID string) utils.UserStatus
+	DeleteUserFromUsersTable(ctx context.Context, twitterID string)
 }
