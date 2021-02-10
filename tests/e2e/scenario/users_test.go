@@ -1,15 +1,15 @@
 package scenario
 
 import (
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"unfire/domain/service"
+	"unfire/infrastructure/client"
+	"unfire/infrastructure/datastore"
 	"unfire/infrastructure/repository"
 	"unfire/tests/e2e/scenario/mock"
-
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/gorilla/sessions"
 
@@ -21,11 +21,21 @@ import (
 func generateUser() *Scenario {
 	return &Scenario{Work: func(t *testing.T, cases UseCases) {
 		e := echo.New()
+
+		var cookies []*http.Cookie
+		cookieStore := sessions.NewCookieStore([]byte("secret"))
+
+		// login
 		{
 			req := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
+			rq := req.URL.Query()
+			rq.Set("callback_url", "https://example.com/callback")
+			req.URL.RawQuery = rq.Encode()
+
 			rec := httptest.NewRecorder()
 			ctx := e.NewContext(req, rec)
-			ctx.Set("_session_store", sessions.NewCookieStore([]byte("secret")))
+			ctx.Set("_session_store", cookieStore)
+
 			// spew.Dump(ctx)
 
 			sein := repository.NewSessionInitializer()
@@ -42,18 +52,50 @@ func generateUser() *Scenario {
 
 			// TODO: ここからCookieを取り出す。
 			// TODO: 以後のリクエストではそのCookieの内容をリクエストに付加して送る
-			spew.Dump(rec.Result())
-			if rec.Result().StatusCode == http.StatusOK {
-				bodyBytes, err := ioutil.ReadAll(rec.Result().Body)
-				if err != nil {
-					log.Fatal(err)
-				}
-				bodyString := string(bodyBytes)
-				log.Printf(bodyString)
+			cookies = rec.Result().Cookies()
+
+			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
+		}
+
+		// callback
+		{
+			req := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
+			for _, v := range cookies {
+				req.AddCookie(v)
 			}
+			params := req.URL.Query()
+			params.Add("oauth_token", "mock token")
+			req.URL.RawQuery = params.Encode()
+
+			rec := httptest.NewRecorder()
+			ctx := e.NewContext(req, rec)
+			ctx.Set("_session_store", cookieStore)
+
+			sein := repository.NewSessionInitializer()
+			sess, err := sein.NewSessionRepository("request", &ctx)
+			if err != nil {
+				log.Fatalf("failed to new session repository err: %+v", err)
+			}
+
+			mas := mock.NewMockAuthService()
+			tc := client.NewTwitterClientInitializer()
+			ds, err := datastore.NewRedisDatastore()
+			if err != nil {
+				log.Fatal(err)
+			}
+			dc := service.NewDatastoreController(ds)
+
+			callback, err := cases.Au.Callback(ctx, sess, mas, tc, dc)
+			assert.Equal(t, "https://example.com/callback", callback)
+			assert.Nil(t, err)
 		}
 
 	}}
+}
+
+func fetchCookieString(response *http.Response) string {
+	reqStr := response.Header.Get("Set-Cookie")
+	return reqStr
 }
 
 func parseCookies(value string) map[string]*http.Cookie {

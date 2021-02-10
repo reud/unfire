@@ -1,8 +1,11 @@
 package route
 
 import (
+	"log"
 	"unfire/api"
 	"unfire/domain/service"
+	"unfire/infrastructure/client"
+	"unfire/infrastructure/datastore"
 	"unfire/infrastructure/repository"
 	"unfire/interface/handler"
 	admin2 "unfire/interface/handler/admin"
@@ -29,8 +32,15 @@ func Init(as service.AuthService, au handler2.AuthUseCase, si repository.Session
 	auth := e.Group("/auth")
 	{
 		ah := handler.NewAuthHandler()
+		tc := client.NewTwitterClientInitializer()
+		ds, err := datastore.NewRedisDatastore()
+		if err != nil {
+			log.Fatal(err)
+		}
+		dc := service.NewDatastoreController(ds)
+
 		auth.GET("/login", ah.GetLogin(au, as, si))
-		auth.GET("/callback", ah.GetCallback(au, as, si))
+		auth.GET("/callback", ah.GetCallback(au, as, si, tc, dc))
 		auth.GET("/stop", ah.GetStop(au, si))
 	}
 

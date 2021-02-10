@@ -74,7 +74,8 @@ func deleteTask(dc usecase.DatastoreController) error {
 			cred := dc.PickAuthorizeData(ctx, userID)
 			log.Printf("created token:%+v secret:%+v\n", cred.Token, cred.Secret)
 
-			tc, err := client.NewTwitterClient(cred)
+			tcii := client.NewTwitterClientInitializer()
+			tc, err := tcii.NewTwitterClient(cred)
 			if err != nil {
 				log.Printf("%+v\n", err)
 				ctx = context.WithValue(ctx, "error", err)

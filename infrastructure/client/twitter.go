@@ -40,7 +40,17 @@ type twitterClient struct {
 	at       *oauth.Credentials
 }
 
-func NewTwitterClient(at *oauth.Credentials) (client.TwitterClient, error) {
+type TwitterClientInitializer interface {
+	NewTwitterClient(at *oauth.Credentials) (client.TwitterClient, error)
+}
+
+type twitterClientInitializerImpl struct{}
+
+func NewTwitterClientInitializer() TwitterClientInitializer {
+	return &twitterClientInitializerImpl{}
+}
+
+func (tcii *twitterClientInitializerImpl) NewTwitterClient(at *oauth.Credentials) (client.TwitterClient, error) {
 	wda, err := fetchProfile(at)
 	if err != nil {
 		return nil, err

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"unfire/domain/service"
+	client2 "unfire/infrastructure/client"
 	repository2 "unfire/infrastructure/repository"
+	"unfire/usecase"
 	"unfire/usecase/handler"
 
 	"github.com/labstack/echo/v4"
@@ -17,7 +19,7 @@ type TwitterCallBackQuery struct {
 
 type AuthHandler interface {
 	GetLogin(usecase handler.AuthUseCase, au service.AuthService, si repository2.SessionInitializer) echo.HandlerFunc
-	GetCallback(usecase handler.AuthUseCase, as service.AuthService, si repository2.SessionInitializer) echo.HandlerFunc
+	GetCallback(usecase handler.AuthUseCase, as service.AuthService, si repository2.SessionInitializer, tc client2.TwitterClientInitializer, dc usecase.DatastoreController) echo.HandlerFunc
 	GetStop(usecase handler.AuthUseCase, si repository2.SessionInitializer) echo.HandlerFunc
 }
 
@@ -43,14 +45,14 @@ func (ah *authHandler) GetLogin(usecase handler.AuthUseCase, as service.AuthServ
 	}
 }
 
-func (ah *authHandler) GetCallback(usecase handler.AuthUseCase, as service.AuthService, si repository2.SessionInitializer) echo.HandlerFunc {
+func (ah *authHandler) GetCallback(usecase handler.AuthUseCase, as service.AuthService, si repository2.SessionInitializer, tc client2.TwitterClientInitializer, dc usecase.DatastoreController) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sr, err := si.NewSessionRepository("request", &c)
 		if err != nil {
 			fmt.Printf("err!: %+v", err)
 			return c.JSON(http.StatusBadRequest, err)
 		}
-		_, err = usecase.Callback(c, sr, as)
+		_, err = usecase.Callback(c, sr, as, tc, dc)
 		if err != nil {
 			fmt.Printf("err!: %+v", err)
 			return c.JSON(http.StatusBadRequest, err)

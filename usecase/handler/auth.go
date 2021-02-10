@@ -20,7 +20,7 @@ import (
 
 type AuthUseCase interface {
 	Login(ctx usecase.RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error)
-	Callback(ctx usecase.RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error)
+	Callback(ctx usecase.RequestContext, mn repository.SessionRepository, authService service.AuthService, tci client.TwitterClientInitializer, dc usecase.DatastoreController) (string, error)
 	Stop(ctx usecase.RequestContext, mn repository.SessionRepository) (string, error)
 }
 
@@ -112,7 +112,7 @@ func (au *authUseCase) Login(ctx usecase.RequestContext, mn repository.SessionRe
 }
 
 // Callback: 次のurlかerrorを返す。
-func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.SessionRepository, as service.AuthService) (string, error) {
+func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.SessionRepository, as service.AuthService, tci client.TwitterClientInitializer, dc usecase.DatastoreController) (string, error) {
 	q := new(TwitterCallbackQuery)
 	if err := ctx.Bind(q); err != nil {
 		return "", err
@@ -126,7 +126,7 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 	}
 
 	if reqt != q.OAuthToken {
-		return "", errors.New("error at request_token != oauth_token")
+		return "", fmt.Errorf("error at request_token != oauth_token, reqt: %+v, oautht: %+v ", reqt, q.OAuthToken)
 	}
 
 	reqts, ok := mn.Get("secret")
@@ -146,10 +146,6 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 	}
 
 	fmt.Printf("got new client\n")
-	tc, err := client.NewTwitterClient(at)
-	if err != nil {
-		return "", err
-	}
 
 	op, err := getOptions(mn)
 
@@ -161,12 +157,11 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 		fmt.Printf("session cleared\n")
 	*/
 
-	ds, err := datastore.NewRedisDatastore()
+	tc, err := tci.NewTwitterClient(at)
 	if err != nil {
 		return "", err
 	}
 
-	dc := service.NewDatastoreController(ds)
 	userID := tc.FetchMe().ID
 
 	// ユーザ一覧情報に保存
