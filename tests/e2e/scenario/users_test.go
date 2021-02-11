@@ -87,38 +87,6 @@ func generateUser() *Scenario {
 			assert.Equal(t, "https://example.com/callback", callback)
 			assert.Nil(t, err)
 		}
-		// TODO: redis上に1000件入っていること。
-		// TODO: force batch service (tweetがn件超えること)
-		// TODO: force reload service (何も起きないこと)
-		// TODO: stop service (DBの中身を見てちゃんと消えていること)
-		// TODO: 複数ユーザ作れる様にする。
-
-		{
-
-		}
 
 	}}
-}
-
-func fetchCookieString(response *http.Response) string {
-	reqStr := response.Header.Get("Set-Cookie")
-	return reqStr
-}
-
-func parseCookies(value string) map[string]*http.Cookie {
-	m := map[string]*http.Cookie{}
-	for _, c := range (&http.Request{Header: http.Header{"Cookie": {value}}}).Cookies() {
-		m[c.Name] = c
-	}
-	return m
-}
-
-func GenerateNormalUsers(n int) []*Scenario {
-	var users []*Scenario
-	cnt := 0
-	for cnt < n {
-		users = append(users, generateUser())
-		cnt++
-	}
-	return users
 }
