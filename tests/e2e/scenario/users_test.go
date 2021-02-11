@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"unfire/domain/service"
-	"unfire/infrastructure/client"
 	"unfire/infrastructure/datastore"
 	"unfire/infrastructure/repository"
 	"unfire/tests/e2e/scenario/mock"
@@ -50,8 +49,7 @@ func generateUser() *Scenario {
 			assert.Equal(t, "http://example.com/authorize", redirect)
 			assert.Nil(t, err)
 
-			// TODO: ここからCookieを取り出す。
-			// TODO: 以後のリクエストではそのCookieの内容をリクエストに付加して送る
+			// ここからCookieを取り出す。
 			cookies = rec.Result().Cookies()
 
 			assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
@@ -78,7 +76,7 @@ func generateUser() *Scenario {
 			}
 
 			mas := mock.NewMockAuthService()
-			tc := client.NewTwitterClientInitializer()
+			tc := mock.NewTwitterClientInitializer()
 			ds, err := datastore.NewRedisDatastore()
 			if err != nil {
 				log.Fatal(err)
@@ -88,6 +86,15 @@ func generateUser() *Scenario {
 			callback, err := cases.Au.Callback(ctx, sess, mas, tc, dc)
 			assert.Equal(t, "https://example.com/callback", callback)
 			assert.Nil(t, err)
+		}
+		// TODO: redis上に1000件入っていること。
+		// TODO: force batch service (tweetがn件超えること)
+		// TODO: force reload service (何も起きないこと)
+		// TODO: stop service (DBの中身を見てちゃんと消えていること)
+		// TODO: 複数ユーザ作れる様にする。
+
+		{
+
 		}
 
 	}}
