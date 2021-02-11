@@ -55,7 +55,9 @@ func reloadTask(dc usecase.DatastoreController) {
 			dc.SetUserStatus(ctx, twitterID, utils.Initializing)
 
 			at := dc.PickAuthorizeData(ctx, twitterID)
-			cred, err := client.NewTwitterClient(at)
+
+			tcii := client.NewTwitterClientInitializer()
+			cred, err := tcii.NewTwitterClient(at)
 			// tokenの有効期限切れの場合なども考えてハンドリングする。
 			if err != nil {
 				log.Printf("generate client failed (reloadTask): user status change to deleted. err: %+v", err)
