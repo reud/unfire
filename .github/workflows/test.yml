@@ -14,4 +14,4 @@ jobs:
         name: build test container
         run: docker build . -f ./tests/Dockerfile -t unfire-test
       - id: run-docker-test-container
-        run: docker run -t unfire-test -e SECURE_PHRASE="mock"
+        run: docker run -e SECURE_PHRASE="mock" -t unfire-test
