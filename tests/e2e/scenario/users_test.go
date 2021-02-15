@@ -28,7 +28,6 @@ func generateUser() *Scenario {
 		{
 			req := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
 			rq := req.URL.Query()
-			rq.Set("callback_url", "https://example.com/callback")
 			req.URL.RawQuery = rq.Encode()
 
 			rec := httptest.NewRecorder()
@@ -84,7 +83,7 @@ func generateUser() *Scenario {
 			dc := service.NewDatastoreController(ds)
 
 			callback, err := cases.Au.Callback(ctx, sess, mas, tc, dc)
-			assert.Equal(t, "https://example.com/callback", callback)
+			assert.Equal(t, "https://portal.reud.net/", callback)
 			assert.Nil(t, err)
 		}
 

@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"reflect"
-	"strconv"
 	client2 "unfire/domain/client"
 	"unfire/domain/repository"
 	"unfire/domain/service"
@@ -27,75 +25,18 @@ type AuthUseCase interface {
 type authUseCase struct {
 }
 
-type GetLoginParameter struct {
-	DeleteLike                 bool   `query:"delete_like"`
-	DeleteLikeCount            int    `query:"delete_like_count" validate:"min=1,max=1000"`
-	KeepLegendaryTweetV1Enable bool   `query:"keep_legendary_tweet_v1_enable"`
-	KeepLegendaryTweetV1Border int    `query:"keep_legendary_tweet_v1_border" validate:"min=15,max=10000000"`
-	CallbackUrl                string `query:"callback_url" validate:"omitempty,url_encoded"`
-}
-
-type Option struct {
-	DeleteLike                 bool   `query:"delete_like"`
-	DeleteLikeCount            int    `query:"delete_like_count" validate:"min=1,max=1000"`
-	KeepLegendaryTweetV1Enable bool   `query:"keep_legendary_tweet_v1_enable"`
-	KeepLegendaryTweetV1Border int    `query:"keep_legendary_tweet_v1_border" validate:"min=15,max=10000000"`
-	CallbackUrl                string `query:"callback_url" validate:"omitempty,url_encoded"`
-}
-
 type TwitterCallbackQuery struct {
 	OAuthToken    string `query:"oauth_token"`
 	OAuthVerifier string `query:"oauth_verifier"`
-}
-
-func newGetLoginParameter() GetLoginParameter {
-	// defaults
-	return GetLoginParameter{
-		DeleteLike:                 false,
-		DeleteLikeCount:            30,
-		KeepLegendaryTweetV1Enable: false,
-		KeepLegendaryTweetV1Border: 20000,
-		CallbackUrl:                "",
-	}
 }
 
 func NewAuthUseCase() AuthUseCase {
 	return &authUseCase{}
 }
 
-func isnil(x interface{}) bool {
-	return (x == nil) || reflect.ValueOf(x).IsNil()
-}
-
 // Login: 次のURLとerrorを返す。
 func (au *authUseCase) Login(ctx usecase.RequestContext, mn repository.SessionRepository, authService service.AuthService) (string, error) {
-
-	// パラメータのバインド
-	ps := newGetLoginParameter()
-	if err := ctx.Bind(&ps); err != nil {
-		return "", err
-	}
-
-	// TODO: Bind機能を実装する。以下のコードは{}のerrorが変えるので調査が必要
-	/*
-		if err := ctx.Validate(&ps); err != nil {
-			return "", err
-		}
-	*/
-
-	if ps.DeleteLike {
-		mn.Set("delete_like_count", strconv.Itoa(ps.DeleteLikeCount))
-		mn.Set("delete_like", "true")
-	}
-
-	if ps.KeepLegendaryTweetV1Enable {
-		mn.Set("keep_legendary_tweet_v1_border", strconv.Itoa(ps.KeepLegendaryTweetV1Border))
-		mn.Set("keep_legendary_tweet_v1_enable", "true")
-	}
-
-	if ps.CallbackUrl != "" {
-		mn.Set("callback_url", ps.CallbackUrl)
-	}
+	// Sessionが存在する場合は削除する。
 
 	rt, u, err := authService.RequestTemporaryCredentialsAuthorizationURL()
 	if err != nil {
@@ -118,8 +59,6 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 		return "", err
 	}
 
-	fmt.Printf("%+v\n", q)
-
 	reqt, ok := mn.Get("token")
 	if !ok {
 		return "", errors.New("error in getting session value (request_token)")
@@ -134,28 +73,14 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 		return "", errors.New("error in getting session value (request_token_secret)")
 	}
 
-	fmt.Printf("reqt: %+v reqts: %+v\n", reqt, reqts)
 	at, err := as.GetAccessToken(&oauth.Credentials{
 		Token:  reqt.(string),
 		Secret: reqts.(string),
 	}, q.OAuthVerifier)
 
-	fmt.Printf("got accesstoken\n")
 	if err != nil {
 		return "", err
 	}
-
-	fmt.Printf("got new client\n")
-
-	op, err := getOptions(mn)
-
-	/*
-		err = mn.Clear(ctx.Request(), &ctx.Response().Writer)
-		if err != nil {
-			return "", err
-		}
-		fmt.Printf("session cleared\n")
-	*/
 
 	tc, err := tci.NewTwitterClient(at)
 	if err != nil {
@@ -174,7 +99,6 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 	dc.SetUserStatus(ctx.Request().Context(), userID, utils.Initializing)
 
 	// twitterIDをセッションに保存
-	// TODO: これ、twitter_idがcookieに入るんじゃなくてsessionIDが入る想定だけど、間違っているかも。動作確認を行う。
 	mn.Set("twitter_id", userID)
 	if err := mn.Save(ctx.Request(), &ctx.Response().Writer); err != nil {
 		log.Printf("failed to save session... err: %+v", err)
@@ -182,7 +106,6 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 
 	// ツイートの全ロードを行い、各種datastoreに格納を行う
 	go func(ctx context.Context) {
-		log.Printf("goroutine start \n")
 
 		tweets, err := tc.FetchTweets(client2.GetAll())
 
@@ -206,11 +129,9 @@ func (au *authUseCase) Callback(ctx usecase.RequestContext, mn repository.Sessio
 		// タスク終了後はユーザのステータスをワーキングにする。
 		dc.SetUserStatus(ctx, userID, utils.Working)
 
-		fmt.Printf("goroutine finished\n")
 	}(context.Background())
 
-	fmt.Printf("callback request finished\n")
-	return op.CallbackUrl, nil
+	return "https://portal.reud.net/", nil
 }
 
 func (au *authUseCase) Stop(ctx usecase.RequestContext, mn repository.SessionRepository) (string, error) {
@@ -236,48 +157,4 @@ func (au *authUseCase) Stop(ctx usecase.RequestContext, mn repository.SessionRep
 	dc.DeleteUserFromUsersTable(ctx.Request().Context(), id.(string))
 
 	return "ok, change status success id :" + id.(string), nil
-}
-
-func getOptions(mn repository.SessionRepository) (*Option, error) {
-	op := &Option{
-		DeleteLike:                 false,
-		DeleteLikeCount:            0,
-		KeepLegendaryTweetV1Enable: false,
-		KeepLegendaryTweetV1Border: 0,
-		CallbackUrl:                "",
-	}
-
-	deleteLike, ok := mn.Get("delete_like")
-	if ok && deleteLike == "true" {
-		op.DeleteLike = true
-		cntStr, ok := mn.Get("delete_like_count")
-		if !ok {
-			return nil, errors.New("error in getting session value (delete_like_count)")
-		}
-		cnt, err := strconv.Atoi(cntStr.(string))
-		if err != nil {
-			return nil, err
-		}
-		op.DeleteLikeCount = cnt
-	}
-
-	keepLegendaryTweetV1, ok := mn.Get("keep_legendary_tweet_v1_enable")
-	if ok && keepLegendaryTweetV1 == "true" {
-		op.KeepLegendaryTweetV1Enable = true
-		cntStr, ok := mn.Get("keep_legendary_tweet_v1_border")
-		if !ok {
-			return nil, errors.New("error in getting session value (keep_legendary_tweet_v1_border)")
-		}
-		cnt, err := strconv.Atoi(cntStr.(string))
-		if err != nil {
-			return nil, err
-		}
-		op.KeepLegendaryTweetV1Border = cnt
-	}
-
-	callbackURL, ok := mn.Get("callback_url")
-	if ok && callbackURL != "" {
-		op.CallbackUrl = callbackURL.(string)
-	}
-	return op, nil
 }
