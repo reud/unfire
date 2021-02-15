@@ -3,6 +3,7 @@ package route
 import (
 	"log"
 	"unfire/api"
+	"unfire/config"
 	"unfire/domain/service"
 	"unfire/infrastructure/client"
 	"unfire/infrastructure/datastore"
@@ -20,8 +21,9 @@ import (
 
 func Init(as service.AuthService, au handler2.AuthUseCase, si repository.SessionInitializer, ru admin.RestartUseCase) *echo.Echo {
 	e := echo.New()
-	// TODO: "secret"はランダムな文字列に変更する。
-	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
+
+	shared := config.GetInstance()
+	e.Use(session.Middleware(sessions.NewCookieStore([]byte(shared.SecurePhrase))))
 
 	e.Use(echoMw.CORSWithConfig(echoMw.CORSConfig{
 		AllowOrigins: []string{"*"},

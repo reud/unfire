@@ -13,6 +13,7 @@ type Config struct {
 	TwitterConsumerSecret string `envconfig:"TWITTER_CONSUMER_SECRET" default:"mock"`
 	Domain                string `envconfig:"DOMAIN" default:"unfire.reud.app"`
 	AdminAPIPassword      string `envconfig:"ADMIN_API_PASSWORD" default:"test"`
+	SecurePhrase          string `envconfig:"SECURE_PHRASE" default:"secret"`
 }
 
 var sharedConfig = readConfig()
@@ -33,6 +34,9 @@ func readConfig() *Config {
 	}
 	if config.TwitterConsumerSecret == "" {
 		panic("TwitterConsumerSecretが空です。")
+	}
+	if config.SecurePhrase == "" {
+		panic("Secure Phraseが空です。")
 	}
 	return config
 }
