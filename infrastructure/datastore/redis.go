@@ -70,6 +70,9 @@ func (rds *RedisDatastore) GetMinElement(ctx context.Context, key string) (strin
 	if err != nil {
 		return "", err
 	}
+	if len(val) == 0 {
+		return "", errors.New("failed to get min element. its empty. (GetMinElement)")
+	}
 	x, ok := val[0].Member.(string)
 	if !ok {
 		return "", errors.New("failed to convert string. (GetMinElement)")
