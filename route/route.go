@@ -60,7 +60,7 @@ func Init(as service.AuthService, au handler2.AuthUseCase, si repository.Session
 		{
 			rh := admin2.NewRestartHandler()
 			restart.GET("/delete", rh.GetDelete(ru))
-			restart.GET("/reload", rh.GetDelete(ru))
+			restart.GET("/reload", rh.GetReload(ru))
 		}
 	}
 
