@@ -85,7 +85,7 @@ func deleteTask(dc usecase.DatastoreController) error {
 
 			// その最小値が24時間以上経過しているかどうか。 経過していない場合は終了
 			if !time.Now().After(t.AddDate(0, 0, 1)) {
-				log.Printf("its new tweet \n")
+				log.Printf("its new tweet: fetch time: %+v \n", t.Format("Mon Jan 2 15:04:05 -0700 MST 2006"))
 				cancel()
 				continue
 			}
