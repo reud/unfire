@@ -45,9 +45,9 @@ func initBatchService() batch.Services {
 
 	// start reload batch
 	// TODO: ここを環境変数で設定可能にする。
-	rbth := batch.NewReloadBatchService(time.Minute*3, dc)
+	rbth := batch.NewReloadBatchService(time.Hour*3, dc)
 	// TODO: ここを環境変数で設定可能にする。
-	dbth := batch.NewDeleteBatchService(time.Minute*3, dc)
+	dbth := batch.NewDeleteBatchService(time.Hour*3, dc)
 	return batch.NewServices(rbth, dbth)
 }
 
