@@ -37,7 +37,9 @@ func (bs *deleteBatchService) Start() {
 
 func (bs *deleteBatchService) StartOnce() {
 	fmt.Println("[force] delete batch started")
-	reloadTask(bs.dc)
+	if err := deleteTask(bs.dc); err != nil {
+		panic(err)
+	}
 	fmt.Println("[force] delete batch finished")
 }
 
