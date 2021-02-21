@@ -36,9 +36,9 @@ func (bs *deleteBatchService) Start() {
 }
 
 func (bs *deleteBatchService) StartOnce() {
-	fmt.Println("[force]delete batch started")
+	fmt.Println("[force] delete batch started")
 	reloadTask(bs.dc)
-	fmt.Println("[force]delete batch finished")
+	fmt.Println("[force] delete batch finished")
 }
 
 // TODO: 同時に二個以上走らせると死ぬ。channelで状態を通知するとかやる？
@@ -56,12 +56,12 @@ func deleteTask(dc usecase.DatastoreController) error {
 			}
 			return nil
 		default:
-			log.Printf("picking oldest tweets")
+			log.Printf("[delete task] picking oldest tweets")
 			// 保存されているツイートの中で最も古いものを取得する。
 			t, userID, err := dc.GetOldestTweetInfoFromTimeLine(ctx)
 			if err != nil {
 				// ここでツイートが存在しない可能性もあるのでエラーを返したりはしない。
-				log.Printf("failed to fetch OldestTweet: %+v\n ", err)
+				log.Printf("[delete task] failed to fetch OldestTweet: %+v\n ", err)
 				return nil
 			}
 
@@ -72,7 +72,6 @@ func deleteTask(dc usecase.DatastoreController) error {
 			}
 
 			cred := dc.PickAuthorizeData(ctx, userID)
-			log.Printf("created token:%+v secret:%+v\n", cred.Token, cred.Secret)
 
 			tcii := client.NewTwitterClientInitializer()
 			tc, err := tcii.NewTwitterClient(cred)
@@ -85,7 +84,7 @@ func deleteTask(dc usecase.DatastoreController) error {
 
 			// その最小値が24時間以上経過しているかどうか。 経過していない場合は終了
 			if !time.Now().After(t.AddDate(0, 0, 1)) {
-				log.Printf("its new tweet: fetch time: %+v \n", t.Format("Mon Jan 2 15:04:05 -0700 MST 2006"))
+				log.Printf("[delete task] its new tweet: fetch time: %+v \n", t.Format("Mon Jan 2 15:04:05 -0700 MST 2006"))
 				cancel()
 				continue
 			}
@@ -104,32 +103,30 @@ func deleteTask(dc usecase.DatastoreController) error {
 				}
 
 				tweet, err := tc.FetchTweetFromIDStr(tweetID)
-
+				// tweetIDからtweet情報を取ってくることに失敗した場合。
 				if err != nil {
-					log.Printf("%+v\n", err)
-					break
-				}
-
-				log.Printf("tweet fetch success  %+v", tweet.ID)
-
-				t, err := time.Parse("2006-01-02T15:04:05.000Z", tweet.CreatedAt)
-				if err != nil {
-					log.Printf("%+v\n", err)
-					ctx = context.WithValue(ctx, "error", err)
-					cancel()
+					// ユーザが手動で削除した場合もある。その時は次のツイートを取り直す。
+					log.Printf("[delete task] maybe, user deleted this tweet yourself: %+v\n", err)
 					continue
 				}
 
+				t, err := time.Parse("2006-01-02T15:04:05.000Z", tweet.CreatedAt)
+				if err != nil {
+					// パースがコケるのは存在し得ないのでpanic
+					log.Fatalf("[delete task] unexpected error in parsing time: %+v", err)
+				}
+
 				// そのツイートの投稿時間が24時間以上経過しているかどうか
-				// 1日経っていないならbreak
+				// 1日経っていないなら、それをtweetsに戻してからbreak
 				if !time.Now().After(t.AddDate(0, 0, 1)) {
-					log.Printf("最古のツイートが一日経っていないので終了します。\n")
+					log.Printf("[delete task] 最古のツイートが一日経っていないので終了します。\n")
 					dc.InsertTweetToTimeLine(ctx, userID, *tweet)
+					dc.PutUserLastTweet(ctx, userID, tweetID)
 					cancel()
 					break
 				}
 
-				log.Printf("deleting... %+v\n", tweet.ID)
+				log.Printf("[delete task] deleting... %+v\n", tweet.ID)
 				// ツイートの削除
 				if err := tc.DestroyTweet(tweet.ID); err != nil {
 					log.Printf("%+v\n", err)

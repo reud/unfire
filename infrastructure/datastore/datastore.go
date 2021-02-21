@@ -10,6 +10,8 @@ type Datastore interface {
 	AppendString(ctx context.Context, key string, value string) error
 	// 末尾の要素を削除して削除した要素を返す(Listでないならエラー)
 	LastPop(ctx context.Context, key string) (string, error)
+	// 末尾に要素を追加する。(Listでないならエラー)
+	LastPush(ctx context.Context, key string, value string) (int64, error)
 	// KeyのListの長さを返す(Listでないならエラー)
 	ListLen(ctx context.Context, key string) (int64, error)
 	// GetStringByIndex Stringをindex指定で返す。

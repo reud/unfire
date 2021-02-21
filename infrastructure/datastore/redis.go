@@ -41,6 +41,10 @@ func (rds *RedisDatastore) LastPop(ctx context.Context, key string) (string, err
 	return rds.client.RPop(ctx, key).Result()
 }
 
+func (rds *RedisDatastore) LastPush(ctx context.Context, key string, value string) (int64, error) {
+	return rds.client.RPush(ctx, key, value).Result()
+}
+
 func (rds *RedisDatastore) ListLen(ctx context.Context, key string) (int64, error) {
 	return rds.client.LLen(ctx, key).Result()
 }

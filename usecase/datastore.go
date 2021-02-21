@@ -27,4 +27,6 @@ type DatastoreController interface {
 	// ユーザのステータスを取得する。
 	GetUserStatus(ctx context.Context, twitterID string) utils.UserStatus
 	DeleteUserFromUsersTable(ctx context.Context, twitterID string)
+	// ユーザのツイートを末尾に追加する。
+	PutUserLastTweet(ctx context.Context, twitterID string, tweetID string)
 }

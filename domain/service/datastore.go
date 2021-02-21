@@ -135,6 +135,14 @@ func (dc *DatastoreController) GetUserLastTweet(ctx context.Context, twitterID s
 	return lastTweetID, true
 }
 
+func (dc *DatastoreController) PutUserLastTweet(ctx context.Context, twitterID string, tweetID string) {
+	_, err := dc.ds.LastPush(ctx, twitterID+utils.TweetsSuffix, tweetID)
+	if err != nil {
+		log.Fatalf("PutUserLastTweetErr: %+v\n", err)
+	}
+
+}
+
 // GetAllUsers: 全ユーザの取得。失敗して良い場合は無いのでfatalさせる。
 func (dc *DatastoreController) GetAllUsers(ctx context.Context) []string {
 	listLen, err := dc.ds.ListLen(ctx, utils.Users)
