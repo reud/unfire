@@ -100,7 +100,7 @@ func deleteTask(dc usecase.DatastoreController) error {
 				tweetID, ok := dc.GetUserLastTweet(ctx, userID)
 				if !ok {
 					// ツイートが存在していない可能性もあるのでWaitingにする。
-					dc.SetUserStatus(ctx, tweetID, utils.Waiting)
+					dc.SetUserStatus(ctx, userID, utils.Waiting)
 					break
 				}
 
